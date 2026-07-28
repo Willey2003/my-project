@@ -1,0 +1,83 @@
+mkdir -p .github/workflows
+cat << 'EOF' > .github/workflows/deploy.yml
+name: CI/CD Pipeline - DevOps Assistant
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch: # Allows manual triggering from the GitHub UI
+
+jobs:
+  # JOB 1: Code Quality & Linting
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Linter
+        run: pip install flake8
+
+      - name: Run Flake8 Linter
+        run: flake8 app.py --count --select=E9,F63,F7,F82 --show-source --statistics
+
+  # JOB 2: Build and Push Docker Image
+  build-and-push:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and Push Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: willey2003/github-analyzer:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # JOB 3: Deploy to Kubernetes
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'latest'
+
+      - name: Configure Kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      - name: Trigger Kubernetes Rollout
+        run: |
+          echo "Restarting deployment to pull the new 'latest' image..."
+          kubectl rollout restart deployment/github-analyzer -n devops-assistant
+          
+          echo "Waiting for rollout to complete..."
+          kubectl rollout status deployment/github-analyzer -n devops-assistant --timeout=120s
+EOF
