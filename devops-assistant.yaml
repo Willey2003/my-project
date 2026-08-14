@@ -70,9 +70,10 @@ spec:
           timeoutSeconds: 3
           failureThreshold: 3
         # SELF-HEALING: Readiness Probe (removes pod from Service if not ready)
+        # NOTE: image is built manually and only serves /health; /ready needs an image rebuild
         readinessProbe:
           httpGet:
-            path: /ready
+            path: /health
             port: 8080
           initialDelaySeconds: 5
           periodSeconds: 10
