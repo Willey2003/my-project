@@ -1,0 +1,14 @@
+# Week 8: L4 vs L7 load balancing. docker compose -f haproxy-lab.yml up -d
+# curl localhost:8080 (L7, round robin by HTTP) ; curl localhost:8081 (L4 TCP)
+# Stats: http://localhost:8404/stats ; stop one backend and watch health checks mark it DOWN.
+services:
+  web1:
+    image: nginxdemos/hello:plain-text
+  web2:
+    image: nginxdemos/hello:plain-text
+  lb:
+    image: haproxy:lts-alpine
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    ports: ["8080:8080", "8081:8081", "8404:8404"]
+    depends_on: [web1, web2]

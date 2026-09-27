@@ -1,0 +1,7 @@
+---
+- name: Apply the server_hardening role (Week 14 deliverable)
+  hosts: all
+  roles:
+    - role: server_hardening
+      vars:
+        hardening_allowed_services: [ssh, http]

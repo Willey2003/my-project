@@ -1,0 +1,7 @@
+# Managed by Ansible role server_hardening - do not edit by hand.
+Port {{ hardening_ssh_port }}
+PermitRootLogin {{ hardening_permit_root_login }}
+MaxAuthTries 3
+LoginGraceTime 30
+X11Forwarding no
+Banner /etc/issue.net

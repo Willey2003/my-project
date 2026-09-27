@@ -1,0 +1,37 @@
+# Weeks 59-66: isolated AI-security sandbox.
+#   docker compose up -d
+#   docker compose exec ollama ollama pull llama3.2:1b      (needs the 'pull' profile: see README)
+#   docker compose run --rm scanner bash
+# The 'lab' network is internal: once the model is pulled, nothing here can reach the internet.
+name: aisec
+services:
+  ollama:
+    image: ollama/ollama:latest
+    volumes: [ollama:/root/.ollama]
+    networks: [lab]
+
+  scanner:
+    build: .
+    working_dir: /work
+    volumes: [./:/work]
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    networks: [lab]
+    profiles: [tools]
+    stdin_open: true
+    tty: true
+
+  # Temporary internet access only for pulling models: docker compose --profile pull up -d puller
+  puller:
+    image: ollama/ollama:latest
+    volumes: [ollama:/root/.ollama]
+    networks: [lab, egress]
+    profiles: [pull]
+    entrypoint: ["sh", "-c", "ollama serve & sleep 3 && ollama pull ${MODEL:-llama3.2:1b} && kill %1"]
+
+networks:
+  lab: { internal: true }
+  egress: {}
+
+volumes:
+  ollama: {}

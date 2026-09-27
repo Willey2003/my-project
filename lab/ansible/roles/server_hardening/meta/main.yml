@@ -1,0 +1,11 @@
+---
+galaxy_info:
+  role_name: server_hardening
+  author: you
+  description: Baseline hardening for RHEL-family lab servers
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: EL
+      versions: ["9", "10"]
+dependencies: []

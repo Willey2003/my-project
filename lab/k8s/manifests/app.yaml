@@ -1,0 +1,100 @@
+# Week 24 sample app: Namespace, ConfigMap, Secret, Deployment with probes/limits/securityContext, Service, Ingress.
+# Build & load image first:  docker build -t localhost:5001/lab-api:v1 --target runtime ../../docker/app && docker push localhost:5001/lab-api:v1
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: shop
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: { name: api-config, namespace: shop }
+data:
+  APP_VERSION: "v1"
+  REQUIRE_DB: "false"
+---
+apiVersion: v1
+kind: Secret
+metadata: { name: api-secret, namespace: shop }
+type: Opaque
+stringData:
+  DATABASE_URL: "postgresql://app:changeme@db:5432/app"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: shop
+  labels: { app: api }
+spec:
+  replicas: 3
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  selector:
+    matchLabels: { app: api }
+  template:
+    metadata:
+      labels: { app: api }
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: api
+          image: localhost:5001/lab-api:v1
+          ports: [{ containerPort: 8000, name: http }]
+          envFrom:
+            - configMapRef: { name: api-config }
+            - secretRef: { name: api-secret }
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { cpu: 250m, memory: 128Mi }
+          readinessProbe:
+            httpGet: { path: /readyz, port: http }
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata: { name: api, namespace: shop }
+spec:
+  selector: { app: api }
+  ports: [{ port: 80, targetPort: http }]
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata: { name: api, namespace: shop }
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: api.localtest.me   # resolves to 127.0.0.1
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: api, port: { number: 80 } }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata: { name: api, namespace: shop }
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels: { app: api }

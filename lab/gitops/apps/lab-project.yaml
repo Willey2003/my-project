@@ -1,0 +1,13 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: lab
+  namespace: argocd
+spec:
+  description: Lab workloads - restricted to lab namespaces and your repo
+  sourceRepos: ["https://github.com/Willey2003/*"]
+  destinations:
+    - { server: https://kubernetes.default.svc, namespace: "shop" }
+    - { server: https://kubernetes.default.svc, namespace: "rollouts-demo" }
+  clusterResourceWhitelist:
+    - { group: "", kind: Namespace }

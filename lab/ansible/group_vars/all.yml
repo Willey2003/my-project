@@ -1,0 +1,5 @@
+---
+lab_admins:
+  - name: devops
+    groups: wheel
+timezone: Asia/Kolkata

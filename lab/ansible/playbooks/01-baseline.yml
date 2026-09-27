@@ -1,0 +1,57 @@
+---
+# Week 13: first playbook - automates the Week 2-3 Linux labs (users, packages, services, firewall).
+- name: Baseline every managed node
+  hosts: all
+  vars:
+    base_packages: [vim-enhanced, git, chrony, tmux, httpd]
+  tasks:
+    - name: Install base packages
+      ansible.builtin.dnf:
+        name: "{{ base_packages }}"
+        state: present
+
+    - name: Create admin users
+      ansible.builtin.user:
+        name: "{{ item.name }}"
+        groups: "{{ item.groups }}"
+        append: true
+      loop: "{{ lab_admins }}"
+
+    - name: Set timezone
+      community.general.timezone:
+        name: "{{ timezone }}"
+
+    - name: Enable chronyd
+      ansible.builtin.service:
+        name: chronyd
+        state: started
+        enabled: true
+
+- name: Web tier
+  hosts: web
+  tasks:
+    - name: Deploy index page with facts
+      ansible.builtin.copy:
+        dest: /var/www/html/index.html
+        content: "{{ ansible_facts['fqdn'] }} running {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}\n"
+        mode: "0644"
+      notify: Restart httpd
+
+    - name: Start httpd
+      ansible.builtin.service:
+        name: httpd
+        state: started
+        enabled: true
+
+    - name: Open http in firewalld
+      ansible.posix.firewalld:
+        service: http
+        permanent: true
+        immediate: true
+        state: enabled
+
+  handlers:
+    - name: Restart httpd
+      ansible.builtin.service:
+        name: httpd
+        state: restarted

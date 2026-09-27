@@ -1,5 +1,7 @@
 # GitHub Code Analyzer & DevOps Assistant
 
+> This repo also holds my DevOps study kit (`lab/`, `study-guides/`, `schedule/`) - see [PREP.md](PREP.md).
+
 A small FastAPI service that inspects a public GitHub repository and returns
 basic metadata plus automated DevOps recommendations.
 

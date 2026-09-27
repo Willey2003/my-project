@@ -1,0 +1,18 @@
+apiVersion: audit.k8s.io/v1
+kind: Policy
+omitStages: ["RequestReceived"]
+rules:
+  # Secrets: metadata only, never log the payload
+  - level: Metadata
+    resources: [{ group: "", resources: ["secrets", "configmaps"] }]
+  # exec/attach/port-forward are high-signal for attackers
+  - level: RequestResponse
+    resources: [{ group: "", resources: ["pods/exec", "pods/attach", "pods/portforward"] }]
+  - level: RequestResponse
+    verbs: ["create", "update", "patch", "delete"]
+    resources:
+      - { group: "rbac.authorization.k8s.io" }
+  - level: None
+    users: ["system:kube-proxy"]
+    verbs: ["watch"]
+  - level: Metadata

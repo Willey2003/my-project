@@ -1,0 +1,17 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rollouts-demo
+  namespace: argocd
+spec:
+  project: lab
+  source:
+    repoURL: https://github.com/Willey2003/my-project.git
+    targetRevision: main
+    path: lab/gitops/rollouts
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: rollouts-demo
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [CreateNamespace=true]

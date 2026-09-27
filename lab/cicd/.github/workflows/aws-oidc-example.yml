@@ -1,0 +1,16 @@
+# Week 21/35: authenticate to AWS with OIDC - no long-lived access keys in GitHub secrets.
+# Create the IAM role with lab/aws/terraform (github_oidc.tf) and set repo variable AWS_ROLE_ARN.
+name: aws-oidc
+on: workflow_dispatch
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  whoami:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ap-south-1
+      - run: aws sts get-caller-identity

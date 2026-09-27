@@ -1,0 +1,31 @@
+# Weeks 40 + DO280 ch.6-8: project quotas, limit ranges, a project template idea, and SCC usage.
+apiVersion: v1
+kind: ResourceQuota
+metadata: { name: team-a-quota, namespace: team-a }
+spec:
+  hard:
+    requests.cpu: "2"
+    requests.memory: 4Gi
+    limits.cpu: "4"
+    limits.memory: 8Gi
+    pods: "20"
+    services.loadbalancers: "0"
+---
+apiVersion: v1
+kind: LimitRange
+metadata: { name: team-a-limits, namespace: team-a }
+spec:
+  limits:
+    - type: Container
+      default: { cpu: 500m, memory: 512Mi }
+      defaultRequest: { cpu: 100m, memory: 128Mi }
+      max: { cpu: "2", memory: 2Gi }
+---
+# An app that needs to run as a fixed UID gets a dedicated SA + the anyuid SCC - never 'privileged'.
+#   oc create sa legacy-app -n team-a
+#   oc adm policy add-scc-to-user anyuid -z legacy-app -n team-a
+#   oc set serviceaccount deployment/legacy legacy-app -n team-a
+#   oc get pod <pod> -o jsonpath='{.metadata.annotations.openshift\.io/scc}'   # which SCC admitted it?
+apiVersion: v1
+kind: ServiceAccount
+metadata: { name: legacy-app, namespace: team-a }
