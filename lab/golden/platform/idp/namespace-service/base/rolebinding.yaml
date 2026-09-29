@@ -1,0 +1,15 @@
+# The owning team's group gets the built-in 'edit' ClusterRole, scoped to this namespace only:
+# create/update workloads, services, configmaps, secrets - but no RBAC, quota or namespace changes.
+# Test: kubectl auth can-i create deploy -n platform-lab --as=jdoe --as-group=team-platform
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: tenant-edit
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: team-platform
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: edit

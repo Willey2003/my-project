@@ -1,6 +1,6 @@
 # Phase 22 - PCA: Prometheus Certified Associate
 
-**Plan weeks:** 2 weeks at 28 h · **Hours:** 56 · **Exam:** PCA, 90 min online proctored, multiple choice (~60 questions), USD 250, one free retake · **Lab:** `./lab.sh addon monitoring`, `lab/golden/observability/up.sh pca`
+**Golden track step:** G2 · 23 Apr-6 May 2027 (see schedule) · **Hours:** 56 · **Exam:** PCA, 90 min online proctored, multiple choice (~60 questions), USD 250, one free retake · **Lab:** `./lab.sh addon monitoring`, `lab/golden/observability/up.sh pca`
 
 | Week | Focus | Deliverable |
 |---|---|---|

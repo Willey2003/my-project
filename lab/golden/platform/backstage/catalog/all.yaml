@@ -1,0 +1,14 @@
+# Phase 27 (CBA) - one Location that pulls in every lab entity (registered from app-config.lab.yaml).
+# In a real org each repo carries its own catalog-info.yaml and a discovery provider finds them.
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: lab-catalog
+  description: Payments sample system for the CBA lab
+spec:
+  targets:
+    - ./group.yaml
+    - ./system.yaml
+    - ./api-payments.yaml
+    - ./component-payments-api.yaml
+    - ./component-payments-web.yaml

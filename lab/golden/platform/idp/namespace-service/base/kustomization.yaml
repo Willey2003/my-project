@@ -1,0 +1,20 @@
+# Phase 28 (CNPA/CNPE) - "namespace as a service" golden path.
+# One tenant = Namespace + ResourceQuota + LimitRange + default-deny NetworkPolicy (+ DNS/same-ns allows) + RoleBinding.
+# This base renders the lab tenant 'platform-lab'. New tenants are overlays under ../tenants/<team>/ that change
+# the namespace, the team label, the group in the RoleBinding and (optionally) the quota size.
+#   kubectl kustomize .        # preview
+#   kubectl apply -k .         # apply (../../up.sh does this)
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: platform-lab        # also renames the Namespace object in overlays
+labels:
+  - pairs:
+      lab.devops/component: cnpe
+      platform.lab.devops/managed-by: namespace-service
+    includeSelectors: false    # labels only, never touch the NetworkPolicy podSelectors
+resources:
+  - namespace.yaml
+  - resourcequota.yaml
+  - limitrange.yaml
+  - networkpolicy.yaml
+  - rolebinding.yaml

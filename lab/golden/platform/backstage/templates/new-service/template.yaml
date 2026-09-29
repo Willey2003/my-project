@@ -1,0 +1,96 @@
+# Phase 27 (CBA) - golden-path scaffolder template: creates a new service repo skeleton, publishes it to GitHub
+# and registers its catalog-info.yaml. Try it first as a dry run in /create/edit (no token needed);
+# a real run needs GITHUB_TOKEN (repo scope) exported before ./up.sh.
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: new-service
+  title: New service (golden path)
+  description: Service repo with catalog-info.yaml, TechDocs, Dockerfile and CI, owned by your team
+  tags: [recommended, golden-path, python]
+spec:
+  owner: group:team-payments
+  type: service
+  parameters:
+    - title: Service details
+      required: [name, owner, system]
+      properties:
+        name:
+          title: Name
+          type: string
+          description: Lowercase, digits and dashes; becomes the repo and component name
+          pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+          maxLength: 40
+          ui:autofocus: true
+        description:
+          title: Description
+          type: string
+          default: A new service created from the golden path
+        owner:
+          title: Owner
+          type: string
+          ui:field: OwnerPicker
+          ui:options:
+            catalogFilter:
+              kind: Group
+        system:
+          title: System
+          type: string
+          ui:field: EntityPicker
+          ui:options:
+            catalogFilter:
+              kind: System
+        lifecycle:
+          title: Lifecycle
+          type: string
+          enum: [experimental, production]
+          default: experimental
+    - title: Repository
+      required: [repoUrl]
+      properties:
+        repoUrl:
+          title: Repository location
+          type: string
+          ui:field: RepoUrlPicker
+          ui:options:
+            allowedHosts: [github.com]
+  steps:
+    - id: fetch
+      name: Render skeleton
+      action: fetch:template
+      input:
+        url: ./skeleton
+        values:
+          name: ${{ parameters.name }}
+          description: ${{ parameters.description }}
+          owner: ${{ parameters.owner }}
+          system: ${{ parameters.system }}
+          lifecycle: ${{ parameters.lifecycle }}
+          repoSlug: ${{ (parameters.repoUrl | parseRepoUrl).owner }}/${{ (parameters.repoUrl | parseRepoUrl).repo }}
+    - id: log
+      name: Show inputs
+      action: debug:log
+      input:
+        message: "Creating ${{ parameters.name }} for ${{ parameters.owner }}"
+        listWorkspace: true
+    - id: publish
+      name: Publish to GitHub
+      action: publish:github
+      input:
+        repoUrl: ${{ parameters.repoUrl }}
+        description: ${{ parameters.description }}
+        defaultBranch: main
+        repoVisibility: private
+    - id: register
+      name: Register in catalog
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
+        catalogInfoPath: /catalog-info.yaml
+  output:
+    links:
+      - title: Repository
+        url: ${{ steps.publish.output.remoteUrl }}
+      - title: Open in catalog
+        icon: catalog
+        entityRef: ${{ steps.register.output.entityRef }}

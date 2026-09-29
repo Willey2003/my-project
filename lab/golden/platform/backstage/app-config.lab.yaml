@@ -1,0 +1,39 @@
+# Phase 27 (CBA) - lab overrides, loaded LAST by docker-compose.yaml (later --config files win; arrays are replaced, not merged).
+app:
+  title: Backstage lab (CBA)
+  baseUrl: http://localhost:7007
+backend:
+  baseUrl: http://localhost:7007
+  listen:
+    port: 7007
+  database:
+    client: pg
+    connection:
+      host: ${POSTGRES_HOST}
+      port: ${POSTGRES_PORT}
+      user: ${POSTGRES_USER}
+      password: ${POSTGRES_PASSWORD}
+integrations:
+  github:
+    - host: github.com
+      token: ${GITHUB_TOKEN}
+auth:
+  providers:
+    guest:
+      dangerouslyAllowOutsideDevelopment: true   # lab only - swap for github/oidc in week G7
+catalog:
+  rules:
+    - allow: [Component, API, Resource, System, Domain, Group, User, Location, Template]
+  locations:
+    - type: file
+      target: /lab/catalog/all.yaml
+    - type: file
+      target: /lab/templates/new-service/template.yaml
+      rules:
+        - allow: [Template]
+techdocs:
+  builder: local
+  generator:
+    runIn: local        # needs mkdocs + mkdocs-techdocs-core in the image (uncomment them in app/packages/backend/Dockerfile)
+  publisher:
+    type: local

@@ -1,6 +1,6 @@
 # Phase 23 - OTCA: OpenTelemetry Certified Associate
 
-**Plan weeks:** 2 weeks at 20 h · **Hours:** 40 · **Exam:** OTCA, 90 min online proctored, multiple choice (~60 questions), USD 250, one free retake · **Lab:** `./lab.sh addon monitoring`, `lab/golden/observability/up.sh otel`
+**Golden track step:** G3 · 7-16 May 2027 (see schedule) · **Hours:** 40 · **Exam:** OTCA, 90 min online proctored, multiple choice (~60 questions), USD 250, one free retake · **Lab:** `./lab.sh addon monitoring`, `lab/golden/observability/up.sh otel`
 
 | Week | Focus | Deliverable |
 |---|---|---|

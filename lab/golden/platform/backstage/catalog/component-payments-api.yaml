@@ -1,0 +1,19 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: payments-api
+  title: Payments API service
+  description: Backend service that implements the payments REST API
+  annotations:
+    github.com/project-slug: example/payments-api      # enables GitHub-based plugins when the repo exists
+    backstage.io/kubernetes-id: payments-api           # Kubernetes plugin matches workloads with this label
+  tags: [python, fastapi]
+  links:
+    - { url: https://example.com/runbooks/payments-api, title: Runbook }
+spec:
+  type: service
+  lifecycle: production
+  owner: group:team-payments
+  system: payments
+  providesApis: [payments-api]        # creates providesApi / apiProvidedBy
+  dependsOn: [resource:payments-db]   # creates dependsOn / dependencyOf

@@ -1,0 +1,28 @@
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: payments-api
+  title: Payments REST API
+  description: Create charges and refunds
+  tags: [rest, openapi]
+spec:
+  type: openapi
+  lifecycle: production
+  owner: group:team-payments
+  system: payments
+  definition: |
+    openapi: 3.0.3
+    info:
+      title: Payments API
+      version: 1.0.0
+    paths:
+      /charges:
+        post:
+          summary: Create a charge
+          responses:
+            "201": { description: Charge created }
+      /refunds:
+        post:
+          summary: Refund a charge
+          responses:
+            "201": { description: Refund created }

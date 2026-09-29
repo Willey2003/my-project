@@ -1,0 +1,17 @@
+# "medium" tenant size. Quotas on requests/limits force every pod to declare them - the LimitRange supplies defaults.
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: tenant-quota
+spec:
+  hard:
+    requests.cpu: "2"
+    requests.memory: 4Gi
+    limits.cpu: "4"
+    limits.memory: 8Gi
+    pods: "20"
+    services: "10"
+    services.loadbalancers: "0"
+    services.nodeports: "0"
+    persistentvolumeclaims: "5"
+    requests.storage: 20Gi

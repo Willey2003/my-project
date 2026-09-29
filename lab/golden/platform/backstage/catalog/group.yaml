@@ -1,0 +1,30 @@
+# Group + members. A guest sign-in is not tied to these users; with GitHub auth, name a User after your GitHub login.
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: team-payments
+  title: Payments team
+  description: Owns card payments and refunds
+spec:
+  type: team
+  profile:
+    displayName: Payments team
+    email: payments@example.com
+  children: []                 # required, may be empty
+  members: [alice, bob]
+---
+apiVersion: backstage.io/v1alpha1
+kind: User
+metadata:
+  name: alice
+spec:
+  profile: { displayName: Alice Example, email: alice@example.com }
+  memberOf: [team-payments]
+---
+apiVersion: backstage.io/v1alpha1
+kind: User
+metadata:
+  name: bob
+spec:
+  profile: { displayName: Bob Example, email: bob@example.com }
+  memberOf: [team-payments]

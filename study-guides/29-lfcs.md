@@ -1,15 +1,15 @@
 # Golden Kubestronaut - LFCS: Linux Foundation Certified System Administrator
 
-**Plan weeks:** G1-G4 (Golden Kubestronaut track) · **Hours:** 40 · **Exam:** 2 h, performance-based, Ubuntu, ~USD 445 (look for LF coupons), 2 killer.sh sessions included · **Lab:** `lab/golden/lfcs/` (2 x Ubuntu 24.04 VMs)
+**Golden track step:** G1 · 13-22 Apr 2027 (see schedule) · **Hours:** 40 · **Exam:** 2 h, performance-based, Ubuntu, ~USD 445 (look for LF coupons), 2 killer.sh sessions included · **Lab:** `lab/golden/lfcs/` (2 x Ubuntu 24.04 VMs)
 
 You already hold RHCSA, so this guide is the **delta**: the same admin skills on Ubuntu, plus topics RHCSA never asks (RAID, reverse proxies, NAT, bonding/bridging, virsh, Git). Do not re-study what `04-rhcsa-ex200.md` covers; re-map it.
 
 | Week | Focus | Deliverable |
 |---|---|---|
-| G1 | Ubuntu delta: apt/dpkg, netplan, ufw, AppArmor, systemd-resolved | `lab/golden/lfcs` tasks 1-8 pass `check.sh` |
-| G2 | Storage: LVM, mdadm RAID, NFS, quotas, swap; cron/timers, sysctl | Tasks 9-21 + RAID rebuild write-up |
-| G3 | Networking: bonding/bridging, nftables/iptables NAT, HAProxy/nginx, SSH hardening | Tasks 22-27 + reverse-proxy lab |
-| G4 | Containers, virsh, Git, killer.sh mocks, sit exam | Tasks 28-30, mock below, LFCS |
+| Study week 1 | Ubuntu delta: apt/dpkg, netplan, ufw, AppArmor, systemd-resolved | `lab/golden/lfcs` tasks 1-8 pass `check.sh` |
+| Study week 2 | Storage: LVM, mdadm RAID, NFS, quotas, swap; cron/timers, sysctl | Tasks 9-21 + RAID rebuild write-up |
+| Study week 3 | Networking: bonding/bridging, nftables/iptables NAT, HAProxy/nginx, SSH hardening | Tasks 22-27 + reverse-proxy lab |
+| Study week 4 | Containers, virsh, Git, killer.sh mocks, sit exam | Tasks 28-30, mock below, LFCS |
 
 ## Domains (verify the current curriculum on https://training.linuxfoundation.org/certification/linux-foundation-certified-sysadmin-lfcs/)
 | Domain | Weight | Your lab |

@@ -1,0 +1,17 @@
+# Violates both rules of require-team-label.yaml: no 'team' label and an unpinned image. Expect: denied.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bad-app
+  namespace: platform-lab
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: bad-app }
+  template:
+    metadata:
+      labels: { app: bad-app }
+    spec:
+      containers:
+        - name: web
+          image: nginx:latest

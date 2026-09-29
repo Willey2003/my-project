@@ -1,0 +1,30 @@
+# ============================ CONCEPT EXERCISE (CNPE week G11) ============================
+# Crossplane-style self-service API for "team namespaces". Read these four files before running anything:
+#   functions.yaml   -> the composition function the pipeline uses (+ RBAC so Crossplane may manage Namespaces/Quotas)
+#   xrd.yaml         -> the platform API developers see (kind XTeamNamespace)
+#   composition.yaml -> how one XTeamNamespace becomes a Namespace + ResourceQuota
+#   example-xr.yaml  -> a developer's request
+# Written for Crossplane v2 (XRD apiVersion apiextensions.crossplane.io/v2, composing plain Kubernetes resources
+# without provider-kubernetes). Versions move fast: check docs.crossplane.io and the function's latest tag before use.
+# Run for real: ../up.sh crossplane   (installs Crossplane with Helm into crossplane-system, then applies these files).
+# ==========================================================================================
+apiVersion: pkg.crossplane.io/v1
+kind: Function
+metadata:
+  name: function-patch-and-transform
+spec:
+  package: xpkg.crossplane.io/crossplane-contrib/function-patch-and-transform:v0.8.2   # check for a newer tag
+---
+# Crossplane's own ServiceAccount aggregates every ClusterRole carrying this label.
+# Without it the composition cannot create Namespaces or ResourceQuotas.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: crossplane-compose-team-namespaces
+  labels:
+    rbac.crossplane.io/aggregate-to-crossplane: "true"
+    lab.devops/component: cnpe
+rules:
+  - apiGroups: [""]
+    resources: [namespaces, resourcequotas]
+    verbs: [get, list, watch, create, update, patch, delete]

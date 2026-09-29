@@ -1,0 +1,78 @@
+# CONCEPT EXERCISE (see functions.yaml header). Pipeline mode: each step is a composition function.
+# Preview offline without a cluster:
+#   crossplane render example-xr.yaml composition.yaml functions.yaml   (needs Docker to run the function)
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xteamnamespaces
+  labels: { lab.devops/component: cnpe }
+spec:
+  compositeTypeRef:
+    apiVersion: platform.lab.devops/v1alpha1
+    kind: XTeamNamespace
+  mode: Pipeline
+  pipeline:
+    - step: patch-and-transform
+      functionRef:
+        name: function-patch-and-transform
+      input:
+        apiVersion: pt.fn.crossplane.io/v1beta1
+        kind: Resources
+        resources:
+          - name: namespace
+            base:
+              apiVersion: v1
+              kind: Namespace
+              metadata:
+                labels:
+                  lab.devops/component: cnpe
+                  pod-security.kubernetes.io/enforce: baseline
+            patches:
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.team
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string: { type: Format, fmt: "platform-lab-%s" }
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.team
+                toFieldPath: metadata.labels[team]
+              - type: ToCompositeFieldPath
+                fromFieldPath: metadata.name
+                toFieldPath: status.namespace
+            readinessChecks:
+              - type: None          # a Namespace has no Ready condition
+          - name: quota
+            base:
+              apiVersion: v1
+              kind: ResourceQuota
+              metadata:
+                name: tenant-quota
+              spec:
+                hard:
+                  requests.cpu: "1"
+                  requests.memory: 2Gi
+                  pods: "10"
+            patches:
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.team
+                toFieldPath: metadata.namespace
+                transforms:
+                  - type: string
+                    string: { type: Format, fmt: "platform-lab-%s" }
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.size
+                toFieldPath: spec.hard[requests.cpu]
+                transforms:
+                  - type: map
+                    map: { small: "1", medium: "2", large: "4" }
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.size
+                toFieldPath: spec.hard[requests.memory]
+                transforms:
+                  - type: map
+                    map: { small: 2Gi, medium: 4Gi, large: 8Gi }
+            readinessChecks:
+              - type: None
+# Exercise ideas: add the LimitRange, NetworkPolicies and RoleBinding from ../namespace-service/base as more resources;
+# then replace patch-and-transform with function-go-templating or function-kcl and compare readability.
