@@ -1,0 +1,37 @@
+# ServiceMonitor: scrape the shop-api Service endpoints. The label release: kps is what the
+# kube-prometheus-stack Prometheus selects on (serviceMonitorSelector). Target shows up as
+# serviceMonitor/prom-lab/shop-api/0 with job="shop-api" and pod/namespace/service labels.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: shop-api
+  namespace: prom-lab
+  labels: { app: shop-api, release: kps }
+spec:
+  selector:
+    matchLabels: { app: shop-api }
+  namespaceSelector:
+    matchNames: [prom-lab]
+  endpoints:
+    - port: http-metrics
+      path: /metrics
+      interval: 15s
+      relabelings:
+        - sourceLabels: [__meta_kubernetes_pod_node_name]
+          targetLabel: node
+      metricRelabelings: []   # lab 7: drop python_gc_.* here
+---
+# Equivalent PodMonitor (scrapes pods directly, no Service needed). Disabled by default to avoid
+# duplicate series - enable by giving it the release: kps label and deleting the ServiceMonitor.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: shop-api-pods
+  namespace: prom-lab
+  labels: { app: shop-api, release: disabled }
+spec:
+  selector:
+    matchLabels: { app: shop-api }
+  podMetricsEndpoints:
+    - port: http-metrics
+      interval: 15s
