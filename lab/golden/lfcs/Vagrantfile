@@ -1,0 +1,71 @@
+# LFCS lab: 2 x Ubuntu 24.04 VMs (the exam runs on Ubuntu).
+#
+#   cd lab/golden/lfcs && VAGRANT_EXPERIMENTAL=disks vagrant up
+#   vagrant ssh lfcs1          (then: sudo -i)
+#   sudo /lfcs/check.sh        (read-only grader for a subset of tasks.md)
+#
+# NICs (VirtualBox): enp0s3 = Vagrant NAT, enp0s8 = 192.168.60.x private network,
+#                    enp0s9 + enp0s10 = unconfigured internal-network NICs for bonding/bridging tasks.
+# Disks: 3 x 2 GB spare disks per VM (sdb, sdc, sdd) for LVM / RAID / quota tasks.
+# RAM budget: 2 x 2 GiB = 4 GiB. Lower with LAB_MEM=1536 (enough for everything except virsh).
+
+BOX  = ENV.fetch("LAB_BOX", "bento/ubuntu-24.04")
+MEM  = ENV.fetch("LAB_MEM", "2048").to_i
+CPUS = ENV.fetch("LAB_CPUS", "2").to_i
+NET  = "192.168.60"
+
+NODES = {
+  "lfcs1" => "#{NET}.11",
+  "lfcs2" => "#{NET}.12",
+}
+
+PROVISION = <<~SHELL
+  set -e
+  grep -q lfcs1 /etc/hosts || cat >> /etc/hosts <<HOSTS
+  #{NET}.11 lfcs1.lab.example.com lfcs1
+  #{NET}.12 lfcs2.lab.example.com lfcs2
+  HOSTS
+  timedatectl set-timezone UTC
+  # Deliberately minimal: installing packages (mdadm, nfs, nginx, docker...) is part of the tasks.
+  apt-get update -qq
+SHELL
+
+Vagrant.configure("2") do |config|
+  config.vm.box = BOX
+  config.vm.box_check_update = false
+
+  # One-way copy of this directory into each VM at /lfcs (re-sync with `vagrant rsync`).
+  config.vm.synced_folder ".", "/lfcs", type: "rsync", rsync__exclude: [".vagrant/"]
+  config.vm.synced_folder ".", "/vagrant", disabled: true
+
+  NODES.each do |name, ip|
+    config.vm.define name, primary: name == "lfcs1" do |node|
+      node.vm.hostname = "#{name}.lab.example.com"
+      node.vm.network "private_network", ip: ip
+      # Two extra NICs left unconfigured for bond0 / br0 practice.
+      2.times do
+        node.vm.network "private_network", auto_config: false, virtualbox__intnet: "lfcs-bond"
+      end
+
+      node.vm.provider "virtualbox" do |vb|
+        vb.name   = "golden-lfcs-#{name}"
+        vb.memory = MEM
+        vb.cpus   = CPUS
+        vb.linked_clone = true
+        vb.customize ["modifyvm", :id, "--nested-hw-virt", "on"]   # lets virsh/KVM tasks run
+      end
+      node.vm.provider "libvirt" do |lv|
+        lv.memory = MEM
+        lv.cpus   = CPUS
+        lv.nested = true
+        3.times { lv.storage :file, size: "2G" }                    # vdb, vdc, vdd on libvirt
+      end
+      # VirtualBox extra disks (needs VAGRANT_EXPERIMENTAL=disks)
+      3.times do |i|
+        node.vm.disk :disk, name: "#{name}-extra#{i + 1}", size: "2GB"
+      end
+
+      node.vm.provision "shell", inline: PROVISION
+    end
+  end
+end
