@@ -1,0 +1,40 @@
+# validate (Enforce): every container image needs an explicit tag, and that tag must not be 'latest'.
+# Two rules because "!*:latest" alone would still admit an untagged image (which means :latest).
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-latest-tag
+  annotations:
+    policies.kyverno.io/title: Disallow Latest Tag
+    policies.kyverno.io/category: Best Practices
+    policies.kyverno.io/severity: medium
+    policies.kyverno.io/description: Images must use a pinned tag other than latest.
+spec:
+  background: true
+  rules:
+    - name: require-image-tag
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaces: [kyverno-lab]
+      validate:
+        failureAction: Enforce
+        message: "An image tag is required."
+        pattern:
+          spec:
+            containers:
+              - image: "*:*"
+    - name: validate-image-tag
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaces: [kyverno-lab]
+      validate:
+        failureAction: Enforce
+        message: "Using a mutable image tag such as 'latest' is not allowed."
+        pattern:
+          spec:
+            containers:
+              - image: "!*:latest"

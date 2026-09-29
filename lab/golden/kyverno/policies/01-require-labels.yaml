@@ -1,0 +1,29 @@
+# validate (Audit): pods in kyverno-lab must carry app.kubernetes.io/name and lab.devops/component.
+# Audit = admitted anyway, but a 'fail' result lands in the namespace PolicyReport (kubectl -n kyverno-lab get polr).
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-labels
+  annotations:
+    policies.kyverno.io/title: Require Labels
+    policies.kyverno.io/category: Best Practices
+    policies.kyverno.io/severity: medium
+    policies.kyverno.io/description: Pods must have app.kubernetes.io/name and lab.devops/component labels.
+spec:
+  background: true
+  emitWarning: true          # show Audit violations as kubectl warnings too
+  rules:
+    - name: check-required-labels
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaces: [kyverno-lab]
+      validate:
+        failureAction: Audit
+        message: "Labels 'app.kubernetes.io/name' and 'lab.devops/component' are required."
+        pattern:
+          metadata:
+            labels:
+              app.kubernetes.io/name: "?*"
+              lab.devops/component: "?*"

@@ -1,0 +1,40 @@
+# cleanup: every 10 minutes delete bare pods (no ownerReferences, i.e. not managed by a Deployment/Job...)
+# in kyverno-lab that opted in with label lab.devops/cleanup=enabled.
+# ClusterCleanupPolicy is its own kind (kyverno.io/v2), run by the cleanup controller on a cron schedule.
+# No policy needed for one-off expiry: label any resource cleanup.kyverno.io/ttl=30m instead.
+# The cleanup controller needs delete RBAC for the kind (aggregated ClusterRole below).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kyverno-lab:cleanup-pods
+  labels:
+    rbac.kyverno.io/aggregate-to-cleanup-controller: "true"
+    lab.devops/component: kca
+rules:
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [get, list, watch, delete]
+---
+apiVersion: kyverno.io/v2
+kind: ClusterCleanupPolicy
+metadata:
+  name: cleanup-bare-pods
+  annotations:
+    policies.kyverno.io/title: Cleanup Bare Pods
+    policies.kyverno.io/category: Other
+    policies.kyverno.io/description: Deletes opted-in bare pods in kyverno-lab every 10 minutes.
+spec:
+  schedule: "*/10 * * * *"
+  match:
+    any:
+      - resources:
+          kinds: [Pod]
+          namespaces: [kyverno-lab]
+          selector:
+            matchLabels:
+              lab.devops/cleanup: enabled
+  conditions:
+    any:
+      - key: "{{ target.metadata.ownerReferences[] || `[]` }}"
+        operator: Equals
+        value: []

@@ -1,0 +1,46 @@
+# verifyImages (Audit): images from ttl.sh (the CKS supply-chain lab) and from your own ghcr.io org must
+# carry a cosign signature made with YOUR key. Audit = unsigned images are admitted but reported.
+#
+# Before applying: replace the placeholder with the contents of cosign.pub, e.g. from
+#   lab/security/supply-chain.sh  (creates lab/security/cosign.pub)   or   cosign generate-key-pair
+# and change ghcr.io/REPLACE-ME to your GitHub org/user. up.sh skips this file while the placeholder is present.
+# mutateDigest is false because Kyverno does not rewrite images to digests in Audit mode.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: verify-image-signatures
+  annotations:
+    policies.kyverno.io/title: Verify Image Signatures
+    policies.kyverno.io/category: Supply Chain
+    policies.kyverno.io/severity: high
+    policies.kyverno.io/description: Images from ttl.sh and ghcr.io/REPLACE-ME must be signed with the lab cosign key.
+spec:
+  webhookTimeoutSeconds: 30
+  failurePolicy: Fail
+  rules:
+    - name: verify-cosign-signature
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaces: [kyverno-lab]
+      verifyImages:
+        - imageReferences:
+            - "ttl.sh/*"
+            - "ghcr.io/REPLACE-ME/*"
+          failureAction: Audit
+          mutateDigest: false
+          verifyDigest: false
+          required: true
+          attestors:
+            - count: 1
+              entries:
+                - keys:
+                    publicKeys: |-
+                      -----BEGIN PUBLIC KEY-----
+                      REPLACE_WITH_YOUR_COSIGN_PUBLIC_KEY
+                      -----END PUBLIC KEY-----
+                    rekor:
+                      ignoreTlog: true
+                    ctlog:
+                      ignoreSCT: true

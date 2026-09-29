@@ -1,0 +1,32 @@
+# validate (Enforce): every container must set CPU + memory requests and a memory limit.
+# (No CPU limit on purpose - CPU limits cause throttling; memory limits prevent node OOM.)
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-requests-limits
+  annotations:
+    policies.kyverno.io/title: Require Requests and Limits
+    policies.kyverno.io/category: Best Practices
+    policies.kyverno.io/severity: medium
+    policies.kyverno.io/description: Containers must declare cpu/memory requests and a memory limit.
+spec:
+  background: true
+  rules:
+    - name: validate-resources
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaces: [kyverno-lab]
+      validate:
+        failureAction: Enforce
+        message: "CPU and memory requests and a memory limit are required."
+        pattern:
+          spec:
+            containers:
+              - resources:
+                  requests:
+                    memory: "?*"
+                    cpu: "?*"
+                  limits:
+                    memory: "?*"

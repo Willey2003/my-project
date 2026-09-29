@@ -1,0 +1,31 @@
+# DNS/FQDN egress: mediabot may query kube-dns for any name (matchPattern "*", so search-path
+# lookups like api.github.com.cilium-lab.svc.cluster.local still get NXDOMAIN instead of REFUSED),
+# but may open connections only to api.github.com on TCP/443.
+# All other egress from mediabot is dropped (https://www.google.com, other pods, ...).
+# The DNS rule is what lets the agent's DNS proxy learn api.github.com's IPs - remove it and nothing resolves.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: mediabot-fqdn
+  namespace: cilium-lab
+  labels: { lab.devops/component: cca }
+spec:
+  description: "Egress: DNS via kube-dns, HTTPS to api.github.com only"
+  endpointSelector:
+    matchLabels: { org: empire, class: mediabot }
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": kube-system
+            "k8s:k8s-app": kube-dns
+      toPorts:
+        - ports:
+            - { port: "53", protocol: ANY }
+          rules:
+            dns:
+              - matchPattern: "*"
+    - toFQDNs:
+        - matchName: api.github.com
+      toPorts:
+        - ports:
+            - { port: "443", protocol: TCP }

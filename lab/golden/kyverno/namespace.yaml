@@ -1,0 +1,6 @@
+# KCA lab namespace. Created AFTER the policies by up.sh, so policy 04 generates its default NetworkPolicy.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kyverno-lab
+  labels: { lab.devops/component: kca, lab.devops/track: golden-kubestronaut }
