@@ -45,7 +45,7 @@ git log -S "password" --all          # find when a string appeared (secret leak 
 
 ## Labs (week 1, ~10 h)
 1. Install Git, set identity, create an SSH key (`ssh-keygen -t ed25519`) and add it to GitHub. Enable 2FA.
-2. Create `devops-lab`. Commit the `prep/lab` folder from this kit as the first commit. Add the `.gitignore` provided.
+2. The kit already lives in `Willey2003/my-project` (`lab/`, `study-guides/`, `schedule/`). Clone it and make your first commit there: add your own notes under `notes/week01.md`.
 3. Branching drill: create two branches that edit the same line of `README.md`, merge one, then resolve the conflict in the second. Repeat with `rebase` instead of `merge` and compare `git lg`.
 4. Undo drill: make three commits, then practise each row of the undo table. Recover a "lost" commit with `reflog`.
 5. PR workflow: branch protection on `main`, open a PR from a branch, review it yourself (comment on a line), squash-merge.

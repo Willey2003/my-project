@@ -9,6 +9,6 @@ The runnable lab lives in the repo, not in this vault: https://github.com/Willey
 - KCSA/CKS security labs, Argo CD/Rollouts/Workflows, Istio, isolated AI-security sandbox
 - Capstone starters (RAG copilot, FAIR risk model, ADR + STRIDE templates)
 
-One Kubernetes namespace per component: shop, ckad-patterns, cka-storage, trouble, cks-bench, cks-runtime, secure, psa-restricted, psa-baseline, rollouts-demo, mesh-bookinfo, team-a (OpenShift).
+One Kubernetes namespace per component: shop, ckad-patterns, cka-storage, trouble, cks-bench, cks-runtime, secure, psa-restricted, psa-baseline, rollouts-demo, mesh-bookinfo, team-a (OpenShift); Golden track: ckad-lab, prom-lab, otel-lab, cilium-lab, kyverno-lab, flux-lab, backstage-lab, platform-lab.
 
 [[Home]]

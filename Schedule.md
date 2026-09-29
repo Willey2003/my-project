@@ -1,6 +1,6 @@
 # Schedule
 
-197 study days, 786 h, 2026-09-28 to 2027-04-12. Mon-Fri 4 h, Sat 5 h, Sun 3 h.
+290 study days, 1158 h, 2026-09-28 to 2027-07-14. Mon-Fri 4 h, Sat 5 h, Sun 3 h.
 
 | Week | Dates | Phase | h |
 |---|---|---|---|
@@ -32,6 +32,19 @@
 | [[Week 26]] | 2027-03-22 to 2027-03-28 | 19. AI/LLM & Agentic Security | 28 |
 | [[Week 27]] | 2027-03-29 to 2027-04-04 | 19. AI/LLM & Agentic Security | 28 |
 | [[Week 28]] | 2027-04-05 to 2027-04-11 | 20. Capstone & Portfolio | 28 |
-| [[Week 29]] | 2027-04-12 to 2027-04-12 | 20. Capstone & Portfolio | 2 |
+| [[Week 29]] | 2027-04-12 to 2027-04-18 | 20. Capstone & Portfolio | 26 |
+| [[Week 30]] | 2027-04-19 to 2027-04-25 | G1. LFCS | 28 |
+| [[Week 31]] | 2027-04-26 to 2027-05-02 | G2. PCA | 28 |
+| [[Week 32]] | 2027-05-03 to 2027-05-09 | G2. PCA | 28 |
+| [[Week 33]] | 2027-05-10 to 2027-05-16 | G3. OTCA | 28 |
+| [[Week 34]] | 2027-05-17 to 2027-05-23 | G4. CCA | 28 |
+| [[Week 35]] | 2027-05-24 to 2027-05-30 | G4. CCA | 28 |
+| [[Week 36]] | 2027-05-31 to 2027-06-06 | G5. KCA | 28 |
+| [[Week 37]] | 2027-06-07 to 2027-06-13 | G5. KCA | 28 |
+| [[Week 38]] | 2027-06-14 to 2027-06-20 | G6. CGOA | 28 |
+| [[Week 39]] | 2027-06-21 to 2027-06-27 | G7. CBA | 28 |
+| [[Week 40]] | 2027-06-28 to 2027-07-04 | G8. CNPA | 28 |
+| [[Week 41]] | 2027-07-05 to 2027-07-11 | G9. CNPE | 28 |
+| [[Week 42]] | 2027-07-12 to 2027-07-14 | G9. CNPE | 12 |
 
 See also [[Exams]] · [[Home]]
