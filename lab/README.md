@@ -34,7 +34,7 @@ chmod +x lab.sh */*.sh */*/*.sh
 | 21-22 | GitHub Actions | `cicd/README.md` |
 | 23-25 | KCNA | `./lab.sh kind up`; `kubectl apply -f k8s/manifests/app.yaml` |
 | 26-29 | CKA | `./lab.sh break list` / `./lab.sh break random` (11 fault drills), `k8s/manifests/storage.yaml`, `./lab.sh kind up cilium` |
-| 30-32 | CKAD | `k8s/manifests/pod-patterns.yaml`, `k8s/manifests/rbac-netpol.yaml` |
+| 30-32 | CKAD | `k8s/manifests/pod-patterns.yaml`, `k8s/manifests/rbac-netpol.yaml`, `golden/ckad/` |
 | 33-35 | AWS | `aws/terraform/README.md` (`terraform destroy` after every session) |
 | 36-44 | OpenShift EX188/EX280/EX380 | `openshift/crc.sh`, `openshift/openshift-drills.md` |
 | 45-50 | KCSA/CKS | `./lab.sh kind up security`; `security/` (kube-bench, Falco, Tetragon, supply chain, PSA, Gatekeeper) |
@@ -43,6 +43,11 @@ chmod +x lab.sh */*.sh */*/*.sh
 | 56-58 | Istio (ICA) | `./lab.sh kind up mesh`; `mesh/README.md` |
 | 59-66 | AI/LLM security | `ai-security/README.md` |
 | 67-70 | Capstone | `capstone/` (copilot, FAIR model, ADR + STRIDE templates) |
+| G1 | LFCS | `golden/lfcs/` (2 Ubuntu 24.04 VMs, `tasks.md`, `check.sh`) |
+| G2-G3 | PCA, OTCA | `./lab.sh golden observability` (`golden/observability/`) |
+| G4 | CCA | `./lab.sh kind up cilium`; `./lab.sh golden cilium` |
+| G5 | KCA | `./lab.sh golden kyverno` |
+| G6-G9 | CGOA, CBA, CNPA, CNPE | `golden/platform/` (flux, backstage, idp) |
 
 ## Namespaces (one per component)
 Every manifest creates and targets its own namespace, so components never collide and each can be removed with `kubectl delete ns <name>`.
@@ -61,6 +66,14 @@ Every manifest creates and targets its own namespace, so components never collid
 | `rollouts-demo` | Argo Rollouts canary | `gitops/rollouts/canary.yaml` |
 | `mesh-bookinfo` | Istio bookinfo, traffic + security policies | `mesh/` |
 | `team-a` | OpenShift quotas/RBAC | `openshift/` |
+| `ckad-lab` | CKAD practice tasks | `golden/ckad/` |
+| `prom-lab` | PCA: sample app, rules, Alertmanager | `golden/observability/pca/` |
+| `otel-lab` | OTCA: Collector, Jaeger, instrumented app | `golden/observability/otel/` |
+| `cilium-lab` | CCA: demo app + L3/L4/L7/DNS policies | `golden/cilium/` |
+| `kyverno-lab` | KCA: policy library + tests | `golden/kyverno/` |
+| `flux-lab` | CGOA: Flux podinfo | `golden/platform/flux/` |
+| `backstage-lab` | CBA: Backstage catalog + templates | `golden/platform/backstage/` |
+| `platform-lab` | CNPA/CNPE: namespace-as-a-service golden path | `golden/platform/idp/` |
 | add-on namespaces | ingress-nginx, envoy-gateway-system, argocd, argo, argo-rollouts, argo-events, falco, gatekeeper-system, cosign-system, kyverno, monitoring, istio-system | `k8s/addons/install.sh` |
 
 ## Safety

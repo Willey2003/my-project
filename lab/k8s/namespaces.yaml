@@ -67,3 +67,51 @@ kind: Namespace
 metadata:
   name: mesh-bookinfo
   labels: { lab.devops/component: ica, istio-injection: enabled }
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ckad-lab
+  labels: { lab.devops/component: ckad, lab.devops/track: golden-kubestronaut }
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: prom-lab
+  labels: { lab.devops/component: pca, lab.devops/track: golden-kubestronaut }
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: otel-lab
+  labels: { lab.devops/component: otca, lab.devops/track: golden-kubestronaut }
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cilium-lab
+  labels: { lab.devops/component: cca, lab.devops/track: golden-kubestronaut }
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kyverno-lab
+  labels: { lab.devops/component: kca, lab.devops/track: golden-kubestronaut }
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: flux-lab
+  labels: { lab.devops/component: cgoa, lab.devops/track: golden-kubestronaut }
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: backstage-lab
+  labels: { lab.devops/component: cba, lab.devops/track: golden-kubestronaut }
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platform-lab
+  labels: { lab.devops/component: cnpe, lab.devops/track: golden-kubestronaut }

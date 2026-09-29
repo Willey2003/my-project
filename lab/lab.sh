@@ -33,6 +33,10 @@ usage: ./lab.sh <command> [args]
    crc                    OpenShift Local helper (openshift/crc.sh)
    ai up|down             isolated Ollama + scanner sandbox (ai-security/)
    capstone up|down       FastAPI + Qdrant copilot skeleton
+
+ Golden Kubestronaut (track G1-G9, golden/README.md)
+   golden list            list Golden labs and their namespaces
+   golden <lab>           run golden/<lab>/up.sh (e.g. observability, cilium, kyverno, platform/flux)
 EOF
 }
 
@@ -116,5 +120,13 @@ case "$cmd" in
   crc)     openshift/crc.sh "$@" ;;
   ai)      cd ai-security; [ "${1:-up}" = up ] && docker compose up -d || docker compose down -v ;;
   capstone) cd capstone/copilot; [ "${1:-up}" = up ] && docker compose up -d --build || docker compose down -v ;;
+  golden)
+    if [ "${1:-list}" = list ]; then
+      find golden -name up.sh | sort | sed 's#^golden/##; s#/up.sh$##'
+      echo "namespaces:"; grep -B1 'golden-kubestronaut' k8s/namespaces.yaml | awk '/name:/ {print "  " $2}'
+    else
+      [ -x "golden/$1/up.sh" ] || [ -f "golden/$1/up.sh" ] || { echo "no golden/$1/up.sh - try: ./lab.sh golden list"; exit 1; }
+      bash "golden/$1/up.sh" "${@:2}"
+    fi ;;
   help|-h|--help|*) usage ;;
 esac
