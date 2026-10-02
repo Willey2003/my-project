@@ -2,6 +2,13 @@
 
 Guide: [`study-guides/24-cca-cilium.md`](../../../study-guides/24-cca-cilium.md) · Namespace: `cilium-lab` (label `lab.devops/component: cca`)
 
+## Architecture
+
+![golden-cilium](../../architecture/golden-cilium.svg)
+
+Editable source: `lab/architecture/golden-cilium.drawio` (open in draw.io / diagrams.net; File > Export as > VSDX gives a Visio file).
+
+
 | File | What |
 |---|---|
 | `demo-app.yaml` | Namespace + Star Wars demo: `deathstar` (Deployment + Service, port 80), `tiefighter` (org=empire), `xwing` (org=alliance), `mediabot` (FQDN tests). Public images from `quay.io/cilium` |

@@ -7,6 +7,13 @@
    to practise manual approvals) and its three secrets. Target = node1 VM or any cheap VM with Docker.
 5. OIDC: after Phase 11 Terraform, run `aws-oidc-example.yml` and confirm no AWS keys exist in repo secrets.
 
+## Architecture
+
+![cicd-pipeline](../architecture/cicd-pipeline.svg)
+
+Editable source: `lab/architecture/cicd-pipeline.drawio` (open in draw.io / diagrams.net; File > Export as > VSDX gives a Visio file).
+
+
 Failure-to-fix table to fill as you go:
 
 | Symptom | Cause | Fix |

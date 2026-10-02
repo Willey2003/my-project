@@ -3,6 +3,13 @@
 Safety: test only the local model you run here. The `lab` network is `internal`, the agent uses mock tools,
 and no credentials exist in the sandbox.
 
+## Architecture
+
+![ai-security-sandbox](../architecture/ai-security-sandbox.svg)
+
+Editable source: `lab/architecture/ai-security-sandbox.drawio` (open in draw.io / diagrams.net; File > Export as > VSDX gives a Visio file).
+
+
 ```bash
 docker compose --profile pull run --rm puller            # one-time model download (egress allowed)
 docker compose up -d ollama                              # model server, no internet

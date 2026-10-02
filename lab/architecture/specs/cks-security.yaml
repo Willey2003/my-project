@@ -1,0 +1,56 @@
+# CKS / KCSA security labs (lab/security): CIS benchmark, runtime detection and enforcement, admission policy,
+# supply chain (cosign + policy-controller) and Pod Security Admission namespaces.
+# Render: python3 lab/architecture/diagram.py lab/architecture/specs/cks-security.yaml lab/architecture/
+title: "CKS security labs (lab/security)"
+subtitle: "./lab.sh kind up security (Cilium, Tetragon, Falco, audit log) + ./lab.sh addon gatekeeper | policy-controller"
+width: 1600
+
+layout:
+  rows:
+    - [host, ext]
+    - [kind]
+
+groups:
+  - { id: host, label: "Host workstation", role: host, cols: 3 }
+  - { id: ext, label: "Public registry", role: external, cols: 1 }
+  - { id: kind, label: "kind cluster 'lab' (security profile): add-ons on top, lab namespaces below", role: platform, cols: 4 }
+  - { id: cp, label: "lab-control-plane", role: platform, parent: kind, cols: 1 }
+  - { id: labs, label: "Lab namespaces", role: compute, parent: kind, cols: 3 }
+
+nodes:
+  # host
+  - { id: labsh, label: "./lab.sh", sublabel: "kind up security, addon", group: host }
+  - { id: keys, label: "cosign.key / cosign.pub", sublabel: "local key pair", group: host, shape: cylinder }
+  - { id: sc, label: "supply-chain.sh", sublabel: "build, Trivy scan, cosign sign", group: host }
+  - { id: ttl, label: "ttl.sh", sublabel: "signed + tainted images, 2 h", group: ext, shape: cloud }
+
+  # control plane
+  - { id: apiserver, label: "kube-apiserver", sublabel: "audit-policy.yaml", group: cp, shape: hexagon }
+  - { id: audit, label: "audit.log", sublabel: "/var/log/kubernetes", group: cp, shape: cylinder }
+
+  # add-ons
+  - { id: falco, label: "Falco (ns falco)", sublabel: "modern eBPF, LAB rules", group: kind, shape: hexagon }
+  - { id: tetragon, label: "Tetragon (kube-system)", sublabel: "eBPF enforcement", group: kind, shape: hexagon }
+  - { id: gatekeeper, label: "Gatekeeper", sublabel: "no-latest deny, require-owner dryrun", group: kind, shape: hexagon }
+  - { id: pc, label: "policy-controller", sublabel: "cosign-system, lab-signed-only", group: kind, shape: hexagon }
+
+  # lab namespaces
+  - { id: pods, label: "Any lab pod", sublabel: "shell, SA token, pkg manager", group: labs }
+  - { id: runtime, label: "cks-runtime", sublabel: "TracingPolicy block-shells", group: labs, shape: hexagon }
+  - { id: secure, label: "secure", sublabel: "signed images only", group: labs, shape: hexagon }
+  - { id: bench, label: "cks-bench", sublabel: "Job kube-bench (hostPID)", group: labs, shape: hexagon }
+  - { id: psa-r, label: "psa-restricted", sublabel: "enforce restricted, hardened pod", group: labs, shape: hexagon }
+  - { id: psa-b, label: "psa-baseline", sublabel: "enforce baseline, warn restricted", group: labs, shape: hexagon }
+
+edges:
+  - { from: labsh, to: kind, label: "kind up / addon", dashed: true }
+  - { from: sc, to: ttl, label: "push" }
+  - { from: keys, to: sc, label: "sign" }
+  - { from: keys, to: pc, label: "cosign.pub", dashed: true }
+  - { from: ttl, to: secure, label: "pull by digest" }
+  - { from: pc, to: secure, label: "verify signature" }
+  - { from: apiserver, to: audit, label: "write" }
+  - { from: bench, to: apiserver, label: "CIS checks" }
+  - { from: tetragon, to: runtime, label: "Sigkill sh / nc" }
+  - { from: falco, to: pods, label: "detect", dashed: true }
+  - { from: gatekeeper, to: labs, label: "admission" }

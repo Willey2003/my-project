@@ -2,6 +2,13 @@
 
 Guide: [`study-guides/25-kca-kyverno.md`](../../../study-guides/25-kca-kyverno.md) · Namespace: `kyverno-lab` (label `lab.devops/component: kca`)
 
+## Architecture
+
+![golden-kyverno](../../architecture/golden-kyverno.svg)
+
+Editable source: `lab/architecture/golden-kyverno.drawio` (open in draw.io / diagrams.net; File > Export as > VSDX gives a Visio file).
+
+
 All policies are scoped to `kyverno-lab` (or to namespaces labelled `lab.devops/component=kca`), so they never touch kube-system or other labs. They use the per-rule `failureAction` syntax, which needs **Kyverno 1.13 or newer** (the `./lab.sh addon kyverno` chart installs the latest).
 
 | File | Type | Mode | What |

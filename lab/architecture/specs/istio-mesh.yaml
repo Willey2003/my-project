@@ -1,0 +1,54 @@
+# Istio service mesh lab (weeks 56-58): bookinfo in mesh-bookinfo, ingress gateway, STRICT mTLS, traffic and security policies.
+# Sources: lab/mesh (README.md, traffic.yaml, security.yaml), lab/k8s/addons/install.sh (istio)
+# Render: python3 lab/architecture/diagram.py lab/architecture/specs/istio-mesh.yaml lab/architecture/
+title: "Istio service mesh: bookinfo (lab/mesh)"
+subtitle: "./lab.sh kind up mesh installs Istio (demo profile, or ISTIO_PROFILE=ambient); traffic.yaml routes and breaks bookinfo, security.yaml enforces STRICT mTLS and deny-by-default"
+width: 1600
+
+layout:
+  rows:
+    - [host, istio]
+    - [bookinfo]
+
+groups:
+  - { id: host, label: "Host workstation", role: host, cols: 1 }
+  - { id: istio, label: "ns istio-system", role: network, cols: 4 }
+  - { id: bookinfo, label: "ns mesh-bookinfo (istio-injection: enabled, sidecar in every pod)", role: compute }
+  - { id: front, label: "front", role: compute, parent: bookinfo, cols: 1 }
+  - { id: reviews, label: "reviews (DestinationRule subsets)", role: compute, parent: bookinfo, cols: 1 }
+  - { id: back, label: "ratings", role: compute, parent: bookinfo, cols: 1 }
+  - { id: traffic, label: "traffic.yaml: traffic management", role: platform, parent: bookinfo, cols: 2 }
+  - { id: authz, label: "security.yaml: AuthorizationPolicies (allow-nothing + ALLOW by SA principal)", role: security, parent: bookinfo, cols: 3 }
+
+nodes:
+  - { id: browser, label: "Browser", sublabel: "localhost:8080/productpage", group: host, shape: cloud }
+
+  - { id: gw, label: "istio-ingressgateway", sublabel: "bookinfo-gateway, port-forward 8080:80", group: istio }
+  - { id: istiod, label: "istiod", sublabel: "config, certs for mTLS", group: istio, shape: hexagon }
+  - { id: peer, label: "PeerAuthentication default", sublabel: "mesh-wide mTLS STRICT", group: istio }
+  - { id: jwt, label: "RequestAuthentication jwt-demo", sublabel: "issuer testing@secure.istio.io", group: istio }
+
+  - { id: productpage, label: "productpage v1", sublabel: "SA bookinfo-productpage", group: front, shape: hexagon }
+  - { id: details, label: "details v1", group: front, shape: hexagon }
+
+  - { id: rv1, label: "reviews v1", sublabel: "80%, no stars", group: reviews, shape: hexagon }
+  - { id: rv2, label: "reviews v2", sublabel: "20%, black stars", group: reviews, shape: hexagon }
+  - { id: rv3, label: "reviews v3", sublabel: "end-user jason, red stars", group: reviews, shape: hexagon }
+
+  - { id: ratings, label: "ratings v1", sublabel: "called by v2 and v3", group: back, shape: hexagon }
+
+  - { id: vs-reviews, label: "VirtualService reviews", sublabel: "end-user jason -> v3, else 80/20", group: traffic }
+  - { id: dr-reviews, label: "DestinationRule reviews", sublabel: "10 conns, eject after 3x 5xx", group: traffic }
+  - { id: vs-ratings, label: "VirtualService ratings", sublabel: "50% get 3s delay, timeout 10s", group: traffic }
+  - { id: dr-ratings, label: "DestinationRule ratings", sublabel: "subset v1", group: traffic }
+
+  - { id: az-pp, label: "productpage-from-gateway", sublabel: "GET from ingressgateway SA", group: authz }
+  - { id: az-rd, label: "reviews-details-from-productpage", sublabel: "GET from productpage SA", group: authz }
+  - { id: az-rt, label: "ratings-from-reviews", sublabel: "from reviews SA", group: authz }
+
+edges:
+  - { from: browser, to: gw, label: "HTTP" }
+  - { from: gw, to: productpage, label: "mTLS" }
+  - { from: productpage, to: details }
+  - { from: productpage, to: reviews }
+  - { from: reviews, to: ratings, label: "v2, v3" }

@@ -1,0 +1,54 @@
+# CNPA/CNPE platform lab: namespace-as-a-service (Kustomize base + tenant overlay), ValidatingAdmissionPolicy guardrail,
+# and the Crossplane v2 XTeamNamespace concept exercise.
+# Render: python3 lab/architecture/diagram.py lab/architecture/specs/golden-idp.yaml lab/architecture/
+title: "Golden CNPA / CNPE: golden-path platform lab (namespaces labelled lab.devops/component: cnpe)"
+subtitle: "./lab.sh kind up cilium, then lab/golden/platform/idp/up.sh [tenant team-a | crossplane | down]; Kubernetes 1.30+"
+width: 1800
+
+layout:
+  rows:
+    - [repo, tenants]
+    - [crossplane, vap]
+
+groups:
+  - { id: repo, label: "namespace-service/ (kubectl apply -k)", role: ci, cols: 1 }
+  - { id: tenants, label: "Tenant namespaces", role: compute, cols: 2 }
+  - { id: platformlab, label: "platform-lab (base, team-platform, medium quota)", role: compute, parent: tenants, cols: 5 }
+  - { id: teamb, label: "platform-lab-team-b (from XR)", role: compute, parent: tenants, cols: 1 }
+  - { id: teama, label: "platform-lab-team-a (overlay, small quota)", role: compute, parent: tenants, cols: 1 }
+  - { id: vap, label: "policy/: ValidatingAdmissionPolicy guardrail", role: security, cols: 2 }
+  - { id: crossplane, label: "crossplane-system: Crossplane v2 (up.sh crossplane, concept exercise)", role: platform, cols: 2 }
+
+nodes:
+  - { id: base, label: "base/", sublabel: "Namespace, quota, LimitRange, NetPols, RoleBinding", group: repo }
+  - { id: overlay, label: "tenants/team-a/", sublabel: "3 edits: ns, team label, group", group: repo }
+
+  - { id: quota, label: "ResourceQuota tenant-quota", sublabel: "2 CPU / 4Gi requests, 20 pods", group: platformlab }
+  - { id: limits, label: "LimitRange tenant-defaults", sublabel: "default requests + limits", group: platformlab }
+  - { id: netpol, label: "NetworkPolicies", sublabel: "default-deny, allow DNS, same ns", group: platformlab }
+  - { id: rb, label: "RoleBinding tenant-edit", sublabel: "group team-platform -> edit", group: platformlab }
+  - { id: good, label: "Deployment good-app", sublabel: "team label, pinned image", group: platformlab }
+
+  - { id: teamans, label: "same 5 objects", sublabel: "group team-a, 1 CPU / 2Gi, 10 pods", group: teama }
+  - { id: teambns, label: "Namespace + ResourceQuota", sublabel: "size small", group: teamb }
+
+  - { id: vapol, label: "VAP (CEL)", sublabel: "tenant-deployment-guardrails: team label, pinned image", group: vap }
+  - { id: vapb, label: "Binding: Deny", sublabel: "namespaces with cnpe label", group: vap }
+  - { id: bad, label: "bad-deploy.yaml", sublabel: "denied: no team label, :latest", group: vap }
+
+  - { id: xr, label: "XR team-b", sublabel: "size: small", group: crossplane }
+  - { id: xrd, label: "XRD XTeamNamespace", sublabel: "platform.lab.devops, team + size", group: crossplane }
+  - { id: comp, label: "Composition xteamnamespaces", sublabel: "Pipeline mode", group: crossplane }
+  - { id: fn, label: "function-patch-and-transform", sublabel: "v0.8.2", group: crossplane, shape: hexagon }
+
+edges:
+  - { from: base, to: platformlab, label: "renders" }
+  - { from: overlay, to: teama, label: "renders" }
+  - { from: overlay, to: base, label: "../../base" }
+  - { from: vapb, to: vapol }
+  - { from: vapb, to: tenants, label: "admits / denies", dashed: true }
+  - { from: bad, to: vapb, label: "rejected" }
+  - { from: xr, to: xrd }
+  - { from: xrd, to: comp }
+  - { from: comp, to: fn }
+  - { from: crossplane, to: teamb, label: "composes" }

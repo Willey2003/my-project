@@ -3,6 +3,17 @@
 Three labs for the GitOps, Backstage and platform engineering exams. Each lab has its own namespace (label
 `lab.devops/component`), so you can remove one with a single `kubectl delete ns`. Every script shows its usage in its header.
 
+## Architecture
+
+![golden-flux](../../architecture/golden-flux.svg)
+
+![golden-backstage](../../architecture/golden-backstage.svg)
+
+![golden-idp](../../architecture/golden-idp.svg)
+
+Editable source: `lab/architecture/golden-flux.drawio`, `lab/architecture/golden-backstage.drawio`, `lab/architecture/golden-idp.drawio` (open in draw.io / diagrams.net; File > Export as > VSDX gives a Visio file).
+
+
 | Dir | Phase / exam | Namespace | Start |
 |---|---|---|---|
 | `flux/` | 26 - CGOA | `flux-lab` (`cgoa`) | `./lab.sh kind up`, install the flux CLI, `flux/up.sh` |

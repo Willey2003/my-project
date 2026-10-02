@@ -1,0 +1,51 @@
+# OTCA (OpenTelemetry) lab: namespace otel-lab, Collector gateway fanning out to Jaeger and Prometheus.
+# Render: python3 lab/architecture/diagram.py lab/architecture/specs/golden-otel.yaml lab/architecture/
+title: "Golden OTCA: OpenTelemetry lab (namespace otel-lab)"
+subtitle: "lab/golden/observability/up.sh otel: builds localhost:5001/otel-demo:0.1, then kubectl apply -k otel"
+width: 1800
+
+layout:
+  rows:
+    - [host, otellab]
+    - [monitoring]
+
+groups:
+  - { id: host, label: "Host", role: host, cols: 1 }
+  - { id: otellab, label: "Namespace otel-lab (lab.devops/component: otca)", role: compute }
+  - { id: apps, label: "Instrumented app", role: compute, parent: otellab, cols: 1 }
+  - { id: col, label: "otel-collector (contrib 0.135.0, gateway Deployment)", role: observability, parent: otellab, cols: 3 }
+  - { id: backends, label: "Backends", role: data, parent: otellab, cols: 1 }
+  - { id: monitoring, label: "Namespace monitoring (kube-prometheus-stack)", role: observability, cols: 3 }
+
+nodes:
+  - { id: docker, label: "docker build + push", sublabel: "otel/app/Dockerfile", group: host }
+  - { id: registry, label: "Local registry", sublabel: "localhost:5001", group: host, shape: cylinder }
+
+  - { id: loadgen, label: "otel-loadgen", sublabel: "curl every 1s, baggage tenant=acme", group: apps }
+  - { id: demo, label: "otel-demo (Flask)", sublabel: ":5000; traces, metrics, logs", group: apps }
+
+  - { id: otlp, label: "otlp receiver", sublabel: "gRPC 4317, HTTP 4318", group: col }
+  - { id: procs, label: "processors", sublabel: "memory_limiter, resource, batch", group: col }
+  - { id: debug, label: "debug exporter", sublabel: "logs pipeline -> stdout", group: col }
+  - { id: promexp, label: "prometheus exporter", sublabel: ":8889 (exemplars)", group: col }
+  - { id: jexp, label: "otlp/jaeger exporter", sublabel: "traces", group: col }
+  - { id: self, label: "self-metrics + ext.", sublabel: ":8888, health 13133, zpages 55679", group: col }
+
+  - { id: jaeger, label: "Jaeger v2 all-in-one", sublabel: "in-memory; UI via port-forward :16686", group: backends, shape: cylinder }
+
+  - { id: sm, label: "ServiceMonitor otel-collector", sublabel: "release: kps", group: monitoring }
+  - { id: prom, label: "Prometheus", sublabel: ":9090", group: monitoring, shape: cylinder }
+
+edges:
+  - { from: docker, to: registry, label: "push" }
+  - { from: registry, to: demo, label: "image", dashed: true }
+  - { from: loadgen, to: demo, label: "HTTP + baggage" }
+  - { from: demo, to: otlp, label: "OTLP :4317" }
+  - { from: otlp, to: procs }
+  - { from: procs, to: jexp }
+  - { from: procs, to: promexp }
+  - { from: procs, to: debug }
+  - { from: jexp, to: jaeger, label: "OTLP :4317" }
+  - { from: prom, to: promexp, label: "scrape :8889" }
+  - { from: prom, to: self, label: "scrape :8888" }
+  - { from: sm, to: prom, label: "config", dashed: true }

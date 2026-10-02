@@ -2,6 +2,15 @@
 
 Hands-on material for `study-guides/22-pca-prometheus.md` and `study-guides/23-otca-opentelemetry.md`.
 
+## Architecture
+
+![golden-pca](../../architecture/golden-pca.svg)
+
+![golden-otel](../../architecture/golden-otel.svg)
+
+Editable source: `lab/architecture/golden-pca.drawio`, `lab/architecture/golden-otel.drawio` (open in draw.io / diagrams.net; File > Export as > VSDX gives a Visio file).
+
+
 ## Prerequisites
 ```bash
 ./lab.sh kind up                  # kind cluster "lab" + local registry localhost:5001

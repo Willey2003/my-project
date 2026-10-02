@@ -4,6 +4,13 @@
 Solve each task yourself first (imperative commands + `$do`, then edit), then diff against the reference.
 Target: every task under 6 minutes, twice in a row.
 
+## Architecture
+
+![golden-ckad](../../architecture/golden-ckad.svg)
+
+Editable source: `lab/architecture/golden-ckad.drawio` (open in draw.io / diagrams.net; File > Export as > VSDX gives a Visio file).
+
+
 Setup:
 ```bash
 ./lab.sh kind up            # use ./lab.sh kind up cilium for task 12 (NetworkPolicy enforcement)

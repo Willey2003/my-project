@@ -4,6 +4,8 @@
 
 Golden Kubestronaut is the CNCF title for holding every CNCF certification plus LFCS. CNCF adds certifications over time, so **check the current list on cncf.io (Kubestronaut program page) before booking**. The table below is the list this kit plans for.
 
+![Golden Kubestronaut roadmap](../lab/architecture/golden-kubestronaut-map.svg)
+
 | Cert | Where it is in this kit | Guide | Lab / namespace | Target |
 |---|---|---|---|---|
 | KCNA | core path, phase 8 | [08-kubernetes-kcna](08-kubernetes-kcna.md) | `lab/k8s` / shop | 2 Dec 2026 |

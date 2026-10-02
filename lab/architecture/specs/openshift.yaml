@@ -1,0 +1,53 @@
+# OpenShift Local (CRC) labs (weeks 36-44, 51-52): crc.sh, HTPasswd IdP + RBAC, team-a quotas and SCC, RHACS drills.
+# Sources: lab/openshift (crc.sh, htpasswd-rbac.sh, quotas-scc.yaml, openshift-drills.md)
+# Render: python3 lab/architecture/diagram.py lab/architecture/specs/openshift.yaml lab/architecture/
+title: "OpenShift Local labs (lab/openshift)"
+subtitle: "./crc.sh setup | start builds a single-node CRC cluster (6 vCPU, 16 GiB, 60 GiB, monitoring on); htpasswd-rbac.sh and quotas-scc.yaml shape it for EX280 / EX380 / EX430 drills"
+width: 1600
+
+layout:
+  rows:
+    - [host, auth]
+    - [crc]
+
+groups:
+  - { id: host, label: "Host workstation (KVM / Hyper-V / HVF)", role: host, cols: 1 }
+  - { id: auth, label: "Identity and RBAC (htpasswd-rbac.sh, run as kubeadmin)", role: security, cols: 3 }
+  - { id: crc, label: "CRC cluster (OpenShift Local, single node)", role: platform }
+  - { id: teama, label: "project team-a (quotas-scc.yaml)", role: compute, parent: crc, cols: 4 }
+  - { id: rhacs, label: "RHACS + Compliance (drills, weeks 51-52)", role: security, parent: crc, cols: 2 }
+  - { id: platform, label: "Cluster services used by the drills", role: observability, parent: crc, cols: 3 }
+
+nodes:
+  - { id: crcsh, label: "crc.sh", sublabel: "setup, start, stop, status, delete", group: host }
+  - { id: pull, label: "Pull secret", sublabel: "~/pull-secret.txt", group: host, shape: cylinder }
+
+  - { id: htpass, label: "Secret htpass-secret", sublabel: "ns openshift-config", group: auth }
+  - { id: oauth, label: "OAuth cluster", sublabel: "IdP lab-htpasswd (HTPasswd)", group: auth }
+  - { id: selfprov, label: "self-provisioner removed", sublabel: "from system:authenticated:oauth", group: auth }
+  - { id: u-admin, label: "admin", sublabel: "cluster-admin", group: auth }
+  - { id: u-dev, label: "developer", sublabel: "group dev-team", group: auth }
+  - { id: u-aud, label: "auditor", sublabel: "cluster-reader", group: auth }
+
+  - { id: quota, label: "ResourceQuota team-a-quota", sublabel: "req 2 CPU / 4Gi, lim 4 / 8Gi, 20 pods, 0 LBs", group: teama }
+  - { id: limits, label: "LimitRange team-a-limits", sublabel: "default 500m / 512Mi, max 2 / 2Gi", group: teama }
+  - { id: sa, label: "SA legacy-app", sublabel: "SCC anyuid, never privileged", group: teama }
+  - { id: rb, label: "RoleBinding edit", sublabel: "group dev-team", group: teama }
+
+  - { id: central, label: "Central + SecuredCluster", sublabel: "RHACS operator", group: rhacs }
+  - { id: policies, label: "Policies", sublabel: "build / deploy / runtime", group: rhacs }
+  - { id: roxctl, label: "roxctl image check", sublabel: "CI gate", group: rhacs }
+  - { id: compliance, label: "Compliance Operator", sublabel: "CIS profile scan", group: rhacs }
+
+  - { id: monitoring, label: "User-workload monitoring", sublabel: "ServiceMonitor, PrometheusRule", group: platform }
+  - { id: gitops, label: "OpenShift GitOps", sublabel: "Argo CD manages quotas", group: platform }
+  - { id: oadp, label: "OADP", sublabel: "backup to MinIO S3", group: platform, shape: cylinder }
+
+edges:
+  - { from: crcsh, to: crc, label: "crc start" }
+  - { from: pull, to: crcsh, label: "-p" }
+  - { from: htpass, to: oauth }
+  - { from: oauth, to: u-dev, label: "login", dashed: true }
+  - { from: u-dev, to: rb, label: "edit in team-a" }
+  - { from: central, to: policies }
+  - { from: policies, to: teama, label: "enforce", dashed: true }

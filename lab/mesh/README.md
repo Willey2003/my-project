@@ -11,5 +11,12 @@ kubectl -n istio-system port-forward svc/istio-ingressgateway 8080:80   # http:/
 Ambient mode: `ISTIO_PROFILE=ambient ./lab.sh addon istio` on a fresh cluster, then
 `kubectl label ns mesh-bookinfo istio.io/dataplane-mode=ambient istio-injection-`.
 
+## Architecture
+
+![istio-mesh](../architecture/istio-mesh.svg)
+
+Editable source: `lab/architecture/istio-mesh.drawio` (open in draw.io / diagrams.net; File > Export as > VSDX gives a Visio file).
+
+
 Troubleshooting drills (ICA 20%): `istioctl analyze`, `istioctl proxy-status`, `istioctl proxy-config routes deploy/productpage-v1`,
 `istioctl x describe pod <pod>`, and break things on purpose: wrong subset name, missing DestinationRule, STRICT mTLS with a non-mesh client.

@@ -3,6 +3,13 @@
 What `terraform apply` creates: VPC (2 AZ, public + private subnets), ALB, ECS Fargate service (2 tasks),
 CloudWatch log group + unhealthy-target alarm to SNS email, monthly budget alert, optional GitHub OIDC role.
 
+## Architecture
+
+![aws-terraform](../../architecture/aws-terraform.svg)
+
+Editable source: `lab/architecture/aws-terraform.drawio` (open in draw.io / diagrams.net; File > Export as > VSDX gives a Visio file).
+
+
 Rough cost in ap-south-1 while running: ALB ~USD 0.6/day + 2 small Fargate tasks ~USD 0.5/day,
 + NAT ~USD 1.1/day if `private_tasks = true`. **Run `terraform destroy` at the end of every study session.**
 

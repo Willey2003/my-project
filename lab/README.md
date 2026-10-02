@@ -1,5 +1,10 @@
 # DevOps lab kit
 
+
+Architecture diagrams for every component (draw.io, SVG, PNG; exportable to Visio) are in [`architecture/`](architecture/README.md). Start with the platform overview:
+
+![Platform overview](architecture/platform-overview.svg)
+
 Everything you need to practise the 70-week plan on your own laptop/desktop. One entry point: `./lab.sh`.
 
 ## Host requirements

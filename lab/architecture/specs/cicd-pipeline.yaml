@@ -1,0 +1,54 @@
+# CI/CD pipeline (weeks 21-22): ci.yml test matrix, release.yml build -> Trivy -> GHCR -> SSH deploy, OIDC to AWS.
+# Sources: lab/cicd/.github/workflows (ci.yml, release.yml, aws-oidc-example.yml), lab/aws/terraform/github_oidc.tf
+# Render: python3 lab/architecture/diagram.py lab/architecture/specs/cicd-pipeline.yaml lab/architecture/
+title: "CI/CD pipeline for lab-api (lab/cicd)"
+subtitle: "Pull requests run ci.yml; pushes to main run release.yml (reuses ci.yml), which fails closed at every step; aws-oidc-example.yml proves keyless AWS access"
+width: 1600
+
+layout:
+  rows:
+    - [repo, ci]
+    - [release]
+    - [aws, targets]
+
+groups:
+  - { id: repo, label: "GitHub repo lab-api", role: host, cols: 1 }
+  - { id: ci, label: "ci.yml (pull_request, workflow_call)", role: ci, cols: 3 }
+  - { id: release, label: "release.yml (push to main, workflow_dispatch)", role: ci, cols: 4 }
+  - { id: targets, label: "Registry and deploy target", role: compute, cols: 2 }
+  - { id: aws, label: "AWS (lab/aws/terraform github_oidc.tf)", role: security, cols: 3 }
+
+nodes:
+  - { id: dev, label: "Developer", sublabel: "PR / merge to main", group: repo, shape: cloud }
+  - { id: src, label: "app/ + .github/", sublabel: "copied from lab/docker/app", group: repo }
+
+  - { id: matrix, label: "test matrix", sublabel: "Python 3.11 / 3.12 / 3.13", group: ci }
+  - { id: pytest, label: "pytest -q", sublabel: "pip cache on requirements*.txt", group: ci }
+  - { id: junit, label: "JUnit artifacts", sublabel: "junit-<python>.xml", group: ci, shape: cylinder }
+
+  - { id: r-test, label: "job test", sublabel: "uses ci.yml", group: release }
+  - { id: r-build, label: "job build", sublabel: "buildx, target runtime, gha cache", group: release }
+  - { id: r-trivy, label: "Trivy gate", sublabel: "HIGH/CRITICAL fixable = fail", group: release }
+  - { id: r-deploy, label: "job deploy", sublabel: "if ENABLE_DEPLOY, env production", group: release }
+
+  - { id: ghcr, label: "GHCR", sublabel: "ghcr.io/<owner>/lab-api:<sha12>", group: targets, shape: cylinder }
+  - { id: vm, label: "Deploy host (node1 VM)", sublabel: "docker run lab-api :8000, /healthz", group: targets }
+
+  - { id: oidc-wf, label: "aws-oidc-example.yml", sublabel: "id-token: write, sts get-caller-identity", group: aws }
+  - { id: oidc-prov, label: "IAM OIDC provider", sublabel: "token.actions.githubusercontent.com", group: aws }
+  - { id: role, label: "IAM role github-deployer", sublabel: "sub repo:<owner/repo>:ref main", group: aws }
+
+edges:
+  - { from: dev, to: src }
+  - { from: src, to: matrix, label: "pull_request" }
+  - { from: matrix, to: pytest }
+  - { from: pytest, to: junit, label: "upload" }
+  - { from: src, to: r-test, label: "push main" }
+  - { from: r-test, to: r-build, label: "needs" }
+  - { from: r-build, to: r-trivy }
+  - { from: r-trivy, to: ghcr, label: "docker push" }
+  - { from: r-trivy, to: r-deploy, label: "needs" }
+  - { from: r-deploy, to: vm, label: "SSH + docker pull" }
+  - { from: ghcr, to: vm, label: "image", dashed: true }
+  - { from: oidc-wf, to: oidc-prov, label: "JWT" }
+  - { from: oidc-prov, to: role, label: "assume role" }

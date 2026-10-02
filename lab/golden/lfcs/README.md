@@ -5,6 +5,13 @@ from RHCSA; this lab drills the Ubuntu delta (apt, netplan, ufw, AppArmor, syste
 RHCSA does not cover (mdadm RAID, NAT, bonding/bridging, reverse proxies, virsh, Git).
 Study guide: [`study-guides/29-lfcs.md`](../../../study-guides/29-lfcs.md).
 
+## Architecture
+
+![golden-lfcs](../../architecture/golden-lfcs.svg)
+
+Editable source: `lab/architecture/golden-lfcs.drawio` (open in draw.io / diagrams.net; File > Export as > VSDX gives a Visio file).
+
+
 | VM | IP (enp0s8) | Spare NICs | Spare disks | RAM |
 |---|---|---|---|---|
 | lfcs1 | 192.168.60.11 | enp0s9, enp0s10 (internal net `lfcs-bond`) | sdb, sdc, sdd (2 GB each) | 2 GiB |

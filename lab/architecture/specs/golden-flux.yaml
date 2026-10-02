@@ -1,0 +1,59 @@
+# CGOA (Flux) lab: podinfo deployed twice in namespace flux-lab (Kustomization and HelmRelease), optional image automation.
+# Render: python3 lab/architecture/diagram.py lab/architecture/specs/golden-flux.yaml lab/architecture/
+title: "Golden CGOA: Flux GitOps lab (namespace flux-lab)"
+subtitle: "./lab.sh kind up, install the flux CLI, then lab/golden/platform/flux/up.sh [status | drift | down]"
+width: 1800
+
+layout:
+  rows:
+    - [internet, fluxlab]
+    - [imageauto, fluxsystem, host]
+
+groups:
+  - { id: internet, label: "Upstream (GitHub / chart repo / ghcr.io)", role: external, cols: 1 }
+  - { id: fluxlab, label: "Namespace flux-lab (lab.devops/component: cgoa)", role: compute }
+  - { id: sources, label: "Sources", role: platform, parent: fluxlab, cols: 1 }
+  - { id: reconcilers, label: "Reconcilers", role: platform, parent: fluxlab, cols: 1 }
+  - { id: workloads, label: "Workloads", role: compute, parent: fluxlab, cols: 1 }
+  - { id: imageauto, label: "Optional: image-automation.yaml (flux-lab)", role: ci, cols: 1 }
+  - { id: fluxsystem, label: "Namespace flux-system (flux install)", role: platform, cols: 2 }
+  - { id: host, label: "Workstation", role: host, cols: 1 }
+
+nodes:
+  - { id: gitrepo, label: "github.com/stefanprodan/podinfo", sublabel: "branch master, ./kustomize", group: internet, shape: cloud }
+  - { id: chartrepo, label: "stefanprodan.github.io/podinfo", sublabel: "Helm chart repo", group: internet, shape: cloud }
+  - { id: ghcr, label: "ghcr.io/stefanprodan/podinfo", sublabel: "image tags", group: internet, shape: cloud }
+
+  - { id: gitsrc, label: "GitRepository podinfo", sublabel: "interval 1m", group: sources }
+  - { id: helmsrc, label: "HelmRepository podinfo", sublabel: "interval 1h", group: sources }
+
+  - { id: ks, label: "Kustomization podinfo", sublabel: "prune, wait, every 10m", group: reconcilers }
+  - { id: hr, label: "HelmRelease podinfo-helm", sublabel: "chart >=6 <7, driftDetection on", group: reconcilers }
+
+  - { id: dep1, label: "Deployment podinfo", sublabel: "+ Service + HPA", group: workloads }
+  - { id: dep2, label: "Deployment podinfo-helm", sublabel: "2 replicas, real Helm release", group: workloads }
+
+  - { id: imgrepo, label: "ImageRepository", sublabel: "scan every 5m", group: imageauto }
+  - { id: imgpol, label: "ImagePolicy", sublabel: "semver 6.x", group: imageauto }
+  - { id: imgupd, label: "ImageUpdateAutomation", sublabel: "commits to your fleet repo", group: imageauto }
+
+  - { id: srcctl, label: "source-controller", group: fluxsystem, shape: hexagon }
+  - { id: ksctl, label: "kustomize-controller", group: fluxsystem, shape: hexagon }
+  - { id: helmctl, label: "helm-controller", group: fluxsystem, shape: hexagon }
+  - { id: imgctl, label: "image-reflector + image-automation", sublabel: "extra components", group: fluxsystem, shape: hexagon }
+
+  - { id: upsh, label: "up.sh", sublabel: "flux install, apply podinfo.yaml", group: host }
+  - { id: drift, label: "up.sh drift", sublabel: "set image 6.0.0 by hand; Flux reverts it", group: host }
+
+edges:
+  - { from: gitsrc, to: gitrepo, label: "fetch" }
+  - { from: helmsrc, to: chartrepo, label: "index" }
+  - { from: imgrepo, to: ghcr, label: "list tags", dashed: true }
+  - { from: gitsrc, to: ks }
+  - { from: helmsrc, to: hr }
+  - { from: ks, to: dep1, label: "apply" }
+  - { from: hr, to: dep2, label: "helm" }
+  - { from: imgrepo, to: imgpol }
+  - { from: imgpol, to: imgupd }
+  - { from: fluxsystem, to: fluxlab, label: "reconciles", dashed: true }
+  - { from: upsh, to: fluxsystem, label: "install" }

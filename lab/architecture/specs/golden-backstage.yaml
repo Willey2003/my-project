@@ -1,0 +1,51 @@
+# CBA (Backstage) lab: Backstage + PostgreSQL on Docker Compose, the payments sample catalog and the new-service template.
+# Render: python3 lab/architecture/diagram.py lab/architecture/specs/golden-backstage.yaml lab/architecture/
+title: "Golden CBA: local Backstage lab (Docker Compose project backstage-lab)"
+subtitle: "lab/golden/platform/backstage/up.sh [build | logs | down]: create-app into ./app, build image backstage:latest, compose up"
+width: 1800
+
+layout:
+  rows:
+    - [host, compose, mounts]
+    - [catalog, github]
+
+groups:
+  - { id: host, label: "Workstation", role: host, cols: 1 }
+  - { id: compose, label: "Docker Compose (backstage-lab)", role: compute, cols: 1 }
+  - { id: github, label: "GitHub (needs GITHUB_TOKEN)", role: external, cols: 1 }
+  - { id: mounts, label: "Read-only mounts under /lab", role: platform, cols: 1 }
+  - { id: catalog, label: "Sample catalog (catalog/all.yaml Location)", role: data, cols: 3 }
+
+nodes:
+  - { id: browser, label: "Browser", sublabel: "http://localhost:7007, guest sign-in", group: host }
+  - { id: upsh, label: "up.sh", sublabel: "npx @backstage/create-app, yarn build-image", group: host }
+
+  - { id: backstage, label: "backstage", sublabel: "backstage:latest, 127.0.0.1:7007", group: compose }
+  - { id: pg, label: "postgres", sublabel: "postgres:16-alpine, volume pgdata", group: compose, shape: cylinder }
+
+  - { id: newrepo, label: "New service repo", sublabel: "private, then catalog:register", group: github, shape: cloud }
+
+  - { id: config, label: "app-config.lab.yaml", sublabel: "pg, guest auth, locations, TechDocs local", group: mounts }
+  - { id: template, label: "Template new-service", sublabel: "fetch:template, publish, register", group: mounts }
+  - { id: skeleton, label: "skeleton/", sublabel: "catalog-info, mkdocs, Dockerfile, app.py, CI", group: mounts }
+
+  - { id: group, label: "Group team-payments", sublabel: "Users alice, bob", group: catalog }
+  - { id: domain, label: "Domain commerce", group: catalog }
+  - { id: system, label: "System payments", group: catalog }
+  - { id: compapi, label: "payments-api", sublabel: "Component: service, production", group: catalog }
+  - { id: api, label: "payments-api", sublabel: "API: OpenAPI 3.0.3", group: catalog }
+  - { id: compweb, label: "payments-web", sublabel: "Component: website, experimental", group: catalog }
+  - { id: db, label: "Resource payments-db", sublabel: "database", group: catalog, shape: cylinder }
+
+edges:
+  - { from: browser, to: backstage, label: "UI" }
+  - { from: upsh, to: compose, label: "compose up", dashed: true }
+  - { from: backstage, to: pg, label: "5432" }
+  - { from: skeleton, to: newrepo, label: "scaffolder run", dashed: true }
+  - { from: mounts, to: backstage, label: "mounted :ro" }
+  - { from: template, to: skeleton }
+  - { from: backstage, to: catalog, label: "ingests" }
+  - { from: system, to: domain, label: "domain" }
+  - { from: compapi, to: api, label: "providesApis" }
+  - { from: compweb, to: api, label: "consumesApis" }
+  - { from: compapi, to: db, label: "dependsOn" }
