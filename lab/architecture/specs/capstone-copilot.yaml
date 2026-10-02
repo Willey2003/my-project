@@ -1,0 +1,49 @@
+# Capstone (weeks 67-70): RAG investigation copilot (FastAPI + Qdrant + Ollama), planned ingest sources, FAIR Monte Carlo, ADR / STRIDE templates.
+# Sources: lab/capstone (copilot/compose.yaml, copilot/Dockerfile, copilot/main.py, risk/fair_montecarlo.py, templates/*.md)
+# Render: python3 lab/architecture/diagram.py lab/architecture/specs/capstone-copilot.yaml lab/architecture/
+title: "Capstone: investigation copilot and risk model (lab/capstone)"
+subtitle: "copilot/: docker compose up -d --build, then http://localhost:8088/docs; ingest sources are the week-68 build-out (dashed); risk/ and templates/ turn findings into decisions"
+width: 1600
+
+layout:
+  rows:
+    - [sources]
+    - [operator, compose, host]
+    - [templates, risk]
+
+groups:
+  - { id: sources, label: "Ingest sources (to build in week 68)", role: observability, cols: 4 }
+  - { id: operator, label: "Operator", role: external, cols: 1 }
+  - { id: compose, label: "Compose project copilot", role: compute, cols: 1 }
+  - { id: host, label: "Host (host.docker.internal)", role: host, cols: 1 }
+  - { id: risk, label: "risk/fair_montecarlo.py (week 69, stdlib only)", role: security, cols: 3 }
+  - { id: templates, label: "templates/", role: ci, cols: 2 }
+
+nodes:
+  - { id: falco, label: "Falco JSON", sublabel: "runtime alerts", group: sources }
+  - { id: k8sev, label: "k8s events", group: sources }
+  - { id: argo, label: "Argo CD sync history", group: sources }
+  - { id: runbooks, label: "Runbooks", sublabel: "markdown", group: sources }
+
+  - { id: user, label: "Operator / eval set", sublabel: "20 questions, retrieval hit-rate", group: operator, shape: cloud }
+
+  - { id: api, label: "api (FastAPI, uid 10001)", sublabel: "8088:8000, POST /ingest, /ask", group: compose }
+  - { id: qdrant, label: "qdrant", sublabel: ":6333, collection ops (cosine)", group: compose, shape: cylinder }
+
+  - { id: ollama, label: "Ollama :11434", sublabel: "nomic-embed-text, llama3.2:1b", group: host, shape: hexagon }
+
+  - { id: scen, label: "3 scenarios", sublabel: "K8s API, supply chain, copilot leak", group: risk }
+  - { id: sim, label: "PERT x Poisson", sublabel: "20,000 runs, ALE in INR", group: risk }
+  - { id: ctrl, label: "Controls", sublabel: "cosign, CIS + Falco / Tetragon", group: risk }
+
+  - { id: adr, label: "ADR template", sublabel: "options, decision, review", group: templates }
+  - { id: stride, label: "STRIDE threat model", sublabel: "+ OWASP LLM Top 10", group: templates }
+
+edges:
+  - { from: sources, to: api, label: "POST /ingest", dashed: true }
+  - { from: user, to: api, label: "POST /ask" }
+  - { from: api, to: qdrant, label: "upsert, top-k" }
+  - { from: api, to: ollama, label: "embed + generate" }
+  - { from: scen, to: sim }
+  - { from: ctrl, to: sim, label: "LEF x" }
+  - { from: stride, to: scen, label: "top 3 risks" }

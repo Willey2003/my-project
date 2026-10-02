@@ -1,0 +1,14 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: payments-web
+  title: Checkout web app
+  description: Customer-facing checkout pages
+  tags: [typescript, react]
+spec:
+  type: website
+  lifecycle: experimental
+  owner: group:team-payments
+  system: payments
+  consumesApis: [payments-api]            # creates consumesApi / apiConsumedBy
+  dependsOn: [component:payments-api]

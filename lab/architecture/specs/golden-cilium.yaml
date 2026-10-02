@@ -1,0 +1,54 @@
+# CCA (Cilium) lab: Star Wars demo in namespace cilium-lab, three CiliumNetworkPolicies, Hubble.
+# Render: python3 lab/architecture/diagram.py lab/architecture/specs/golden-cilium.yaml lab/architecture/
+title: "Golden CCA: Cilium policy lab (namespace cilium-lab)"
+subtitle: "./lab.sh kind up cilium, then ./lab.sh golden cilium (= golden/cilium/up.sh [policy l3l4|l7|fqdn|none | test | down])"
+width: 1800
+
+layout:
+  rows:
+    - [host, ciliumlab, kubesystem]
+    - [internet, cnp]
+
+groups:
+  - { id: host, label: "Host", role: host, cols: 1 }
+  - { id: ciliumlab, label: "Namespace cilium-lab (lab.devops/component: cca)", role: compute }
+  - { id: clients, label: "Client pods (json-mock)", role: compute, parent: ciliumlab, cols: 1 }
+  - { id: target, label: "Target", role: compute, parent: ciliumlab, cols: 1 }
+  - { id: cnp, label: "CiliumNetworkPolicies in cilium-lab (up.sh policy ...)", role: security, cols: 3 }
+  - { id: kubesystem, label: "kube-system: Cilium CNI (kube-proxy kept)", role: network, cols: 1 }
+  - { id: internet, label: "Internet", role: external, cols: 1 }
+
+nodes:
+  - { id: upsh, label: "up.sh test", sublabel: "curl matrix via kubectl exec", group: host }
+  - { id: hubblecli, label: "hubble CLI", sublabel: "localhost:4245", group: host }
+
+  - { id: tie, label: "tiefighter", sublabel: "org=empire", group: clients }
+  - { id: xwing, label: "xwing", sublabel: "org=alliance", group: clients }
+  - { id: mediabot, label: "mediabot", sublabel: "org=empire, FQDN tests", group: clients }
+
+  - { id: dssvc, label: "Service deathstar", sublabel: "TCP 80", group: target }
+  - { id: ds, label: "deathstar", sublabel: "2x starwars:v2.1", group: target }
+
+  - { id: l3l4, label: "rule1 (01 L3/L4)", sublabel: "deathstar: from org=empire, TCP 80", group: cnp }
+  - { id: l7, label: "rule1 (02 L7 HTTP)", sublabel: "deathstar: POST /v1/request-landing", group: cnp }
+  - { id: fqdn, label: "mediabot-fqdn (03)", sublabel: "mediabot egress: DNS + api.github.com:443", group: cnp }
+
+  - { id: agent, label: "cilium agent (DaemonSet)", sublabel: "eBPF datapath, identities", group: kubesystem, shape: hexagon }
+  - { id: envoy, label: "Envoy + DNS proxy", sublabel: "L7 and FQDN enforcement", group: kubesystem }
+  - { id: kubedns, label: "kube-dns", sublabel: "UDP/TCP 53", group: kubesystem }
+  - { id: relay, label: "hubble-relay + UI", sublabel: "flows from every agent", group: kubesystem }
+
+  - { id: github, label: "api.github.com", sublabel: "443 allowed", group: internet, shape: cloud }
+  - { id: other, label: "everything else", sublabel: "dropped under fqdn", group: internet, shape: cloud }
+
+edges:
+  - { from: tie, to: dssvc, label: "POST landing / PUT exhaust" }
+  - { from: xwing, to: dssvc, label: "timeout (l3l4, l7)", dashed: true }
+  - { from: dssvc, to: ds }
+  - { from: mediabot, to: kubedns, label: "DNS" }
+  - { from: mediabot, to: github, label: "HTTPS" }
+  - { from: mediabot, to: other, dashed: true }
+  - { from: agent, to: cnp, label: "enforces", dashed: true }
+  - { from: agent, to: envoy }
+  - { from: hubblecli, to: relay, label: "hubble observe" }
+  - { from: upsh, to: clients, label: "exec curl" }

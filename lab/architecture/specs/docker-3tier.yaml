@@ -1,0 +1,48 @@
+# Docker 3-tier stack (weeks 17-20): compose project lab3tier, two networks, one volume, Trivy scanning.
+# Sources: lab/docker (compose.yaml, nginx.conf, app/Dockerfile, scan.sh). Commands: ./lab.sh compose up|down|scan
+# Render: python3 lab/architecture/diagram.py lab/architecture/specs/docker-3tier.yaml lab/architecture/
+title: "Docker Compose 3-tier stack (lab3tier)"
+subtitle: "./lab.sh compose up builds lab-api from a multi-stage Dockerfile and starts web, api and db; ./lab.sh compose scan runs Trivy"
+width: 1600
+
+layout:
+  rows:
+    - [host, build]
+    - [compose]
+    - [trivy]
+
+groups:
+  - { id: host, label: "Host workstation", role: host, cols: 1 }
+  - { id: build, label: "app/Dockerfile: multi-stage build (python 3.12-slim)", role: ci, cols: 4 }
+  - { id: compose, label: "Compose project lab3tier (./lab.sh compose up | down)" , role: compute }
+  - { id: front, label: "network front", role: network, parent: compose, cols: 1 }
+  - { id: both, label: "front + back", role: compute, parent: compose, cols: 1 }
+  - { id: back, label: "network back (internal: true, no internet)", role: data, parent: compose, cols: 2 }
+  - { id: trivy, label: "scan.sh: Trivy (./lab.sh compose scan), fails on fixable HIGH / CRITICAL", role: security, cols: 3 }
+
+nodes:
+  - { id: user, label: "curl / browser", sublabel: "localhost:8080", group: host, shape: cloud }
+
+  - { id: st-build, label: "build", sublabel: "pip wheel, cache mount", group: build }
+  - { id: st-test, label: "test", sublabel: "pytest -q", group: build }
+  - { id: st-runtime, label: "runtime", sublabel: "uid 10001, gunicorn :8000", group: build }
+  - { id: image, label: "lab-api:local", sublabel: "HEALTHCHECK /healthz", group: build, shape: cylinder }
+
+  - { id: web, label: "web", sublabel: "nginx-unprivileged, publishes 8080:8080", group: front }
+  - { id: api, label: "api (Flask)", sublabel: ":8000, cap_drop ALL, 0.5 CPU / 256M", group: both }
+  - { id: db, label: "db postgres:17-alpine", sublabel: ":5432, pg_isready", group: back, shape: cylinder }
+  - { id: vol, label: "volume dbdata", sublabel: "/var/lib/postgresql/data", group: back, shape: cylinder }
+
+  - { id: tv-image, label: "trivy image", sublabel: "lab-api:local vulns", group: trivy }
+  - { id: tv-config, label: "trivy config", sublabel: "Dockerfile + compose", group: trivy }
+  - { id: tv-fs, label: "trivy fs", sublabel: "secret scanner", group: trivy }
+
+edges:
+  - { from: st-build, to: st-test, label: "wheels" }
+  - { from: st-test, to: st-runtime }
+  - { from: st-runtime, to: image }
+  - { from: user, to: web, label: "HTTP" }
+  - { from: web, to: api, label: "proxy_pass :8000" }
+  - { from: api, to: db, label: "5432" }
+  - { from: db, to: vol }
+  - { from: image, to: api, label: "image", dashed: true }

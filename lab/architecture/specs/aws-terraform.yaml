@@ -1,0 +1,50 @@
+# AWS Terraform lab (weeks 33-35): VPC over 2 AZs, ALB, ECS Fargate, optional NAT, GitHub OIDC role, CloudWatch, SNS, budget.
+# Sources: lab/aws/terraform (network.tf, ecs.tf, github_oidc.tf, monitoring.tf, variables.tf, outputs.tf)
+# Render: python3 lab/architecture/diagram.py lab/architecture/specs/aws-terraform.yaml lab/architecture/
+title: "AWS lab: ECS Fargate behind an ALB (lab/aws/terraform)"
+subtitle: "terraform apply in ap-south-1 (costs money; destroy after every session). private_tasks = true moves the tasks to private subnets behind one NAT gateway"
+width: 1600
+
+layout:
+  rows:
+    - [ext, iam]
+    - [vpc]
+    - [ops]
+
+groups:
+  - { id: ext, label: "Outside AWS", role: external, cols: 2 }
+  - { id: iam, label: "IAM (ecs.tf, github_oidc.tf)", role: security, cols: 2 }
+  - { id: vpc, label: "VPC 10.20.0.0/16 across 2 AZs (network.tf, ecs.tf)", role: network }
+  - { id: public, label: "Public subnets x2: 10.20.0.0/24, 10.20.1.0/24, default route -> IGW", role: network, parent: vpc, cols: 4 }
+  - { id: private, label: "Private subnets x2: 10.20.10.0/24, 10.20.11.0/24, default route -> NAT (if private_tasks)", role: compute, parent: vpc, cols: 1 }
+  - { id: ops, label: "Monitoring and cost guard-rails (monitoring.tf)", role: observability, cols: 4 }
+
+nodes:
+  - { id: user, label: "Internet client", sublabel: "curl $(terraform output alb_url)", group: ext, shape: cloud }
+  - { id: gha, label: "GitHub Actions", sublabel: "OIDC token, repo main only", group: ext, shape: cloud }
+
+  - { id: oidc, label: "OIDC provider + github-deployer", sublabel: "ecs:UpdateService, iam:PassRole", group: iam }
+  - { id: exec, label: "ECS execution role", sublabel: "image pull + awslogs", group: iam }
+
+  - { id: igw, label: "Internet gateway", sublabel: "lab-igw", group: public }
+  - { id: alb, label: "ALB :80 + target group (ip)", sublabel: "sg alb 0.0.0.0/0 -> 80, health /", group: public }
+  - { id: ecs-pub, label: "ECS Fargate service x2", sublabel: "default: public IP, sg tasks <- ALB only", group: public, shape: hexagon }
+  - { id: nat, label: "NAT gateway + EIP", sublabel: "only if private_tasks", group: public }
+
+  - { id: ecs-priv, label: "ECS Fargate service x2", sublabel: "private_tasks = true, no public IP", group: private, shape: hexagon }
+
+  - { id: logs, label: "CloudWatch logs", sublabel: "/ecs/lab-app, 7 days", group: ops, shape: cylinder }
+  - { id: alarm, label: "Alarm unhealthy-targets", sublabel: "ALB unhealthy hosts > 0", group: ops }
+  - { id: sns, label: "SNS lab-alerts", sublabel: "email subscription", group: ops }
+  - { id: budget, label: "Budget lab-monthly", sublabel: "USD 10, 80% forecast email", group: ops }
+
+edges:
+  - { from: user, to: igw, label: "HTTP 80" }
+  - { from: igw, to: alb }
+  - { from: alb, to: ecs-pub, label: "forward" }
+  - { from: alb, to: ecs-priv, label: "forward", dashed: true }
+  - { from: ecs-priv, to: nat, label: "image pull", dashed: true }
+  - { from: gha, to: oidc, label: "assume role" }
+  - { from: exec, to: vpc, label: "task execution", dashed: true }
+  - { from: ecs-priv, to: logs, label: "awslogs" }
+  - { from: alarm, to: sns, label: "alarm" }

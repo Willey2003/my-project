@@ -1,0 +1,23 @@
+# ICA weeks 56-58 + capstone: bigger workers for Istio + Argo CD. Istio installed by lab.sh.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: lab
+containerdConfigPatches:
+  - |-
+    [plugins."io.containerd.grpc.v1.cri".registry]
+      config_path = "/etc/containerd/certs.d"
+nodes:
+  - role: control-plane
+    kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "ingress-ready=true"
+    extraPortMappings:
+      - { containerPort: 80, hostPort: 80, protocol: TCP }
+      - { containerPort: 443, hostPort: 443, protocol: TCP }
+      - { containerPort: 30000, hostPort: 30000, protocol: TCP }
+  - role: worker
+  - role: worker
+  - role: worker

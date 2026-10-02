@@ -1,0 +1,14 @@
+# kubectl apply -k lab/golden/observability/otel
+# (the ServiceMonitor in collector.yaml needs the monitoring addon's CRDs; the app image is built by ../up.sh otel)
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: otel-lab
+resources:
+  - namespace.yaml
+  - jaeger.yaml
+  - collector.yaml
+  - app/deployment.yaml
+configMapGenerator:
+  - name: otel-collector-config
+    files:
+      - collector-config.yaml

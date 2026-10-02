@@ -1,0 +1,15 @@
+# Compliant pod: labels, pinned tag from an allowed registry, requests + memory limit.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: good-pod
+  namespace: kyverno-lab
+  labels: { app.kubernetes.io/name: good-pod, lab.devops/component: kca }
+spec:
+  containers:
+    - name: web
+      image: docker.io/nginxinc/nginx-unprivileged:1.27-alpine
+      ports: [ { containerPort: 8080 } ]
+      resources:
+        requests: { cpu: 10m, memory: 32Mi }
+        limits: { memory: 64Mi }

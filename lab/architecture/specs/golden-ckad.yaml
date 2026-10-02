@@ -1,0 +1,61 @@
+# CKAD golden exercises: the 12 reference solutions in lab/golden/ckad/exercises.yaml, namespace ckad-lab.
+# Render: python3 lab/architecture/diagram.py lab/architecture/specs/golden-ckad.yaml lab/architecture/
+title: "Golden CKAD: 12 timed tasks in namespace ckad-lab"
+subtitle: "./lab.sh kind up [cilium] + ./lab.sh addon ingress; kubectl apply -f lab/golden/ckad/exercises.yaml"
+width: 1900
+
+layout:
+  rows:
+    - [client, ns]
+
+groups:
+  - { id: client, label: "Host / add-ons", role: host, cols: 1 }
+  - { id: ns, label: "Namespace ckad-lab (lab.devops/component=ckad)", role: platform }
+  - { id: design, label: "Design & Build (t1-t4)", role: compute, cols: 2, parent: ns }
+  - { id: deploy, label: "Deployment + Observability (t5-t7)", role: compute, cols: 2, parent: ns }
+  - { id: config, label: "Config, Security, RBAC (t8-t10)", role: security, cols: 2, parent: ns }
+  - { id: net, label: "Networking (t11-t12)", role: network, cols: 3, parent: ns }
+
+nodes:
+  - { id: curl, label: "curl from host", sublabel: "Host: ckad.lab.local", group: client, shape: cloud }
+  - { id: ingress-nginx, label: "ingress-nginx", sublabel: "addon ingress", group: client, shape: hexagon }
+  - { id: cilium, label: "Cilium CNI", sublabel: "kind up cilium (t12)", group: client, shape: hexagon }
+
+  - { id: t1, label: "t1-sidecar", sublabel: "init seed + native sidecar", group: design }
+  - { id: t2, label: "t2-job", sublabel: "4 completions, par. 2", group: design }
+  - { id: t3, label: "t3-cron", sublabel: "*/2 min, Forbid; t3-manual", group: design }
+  - { id: t4pod, label: "t4-writer", sublabel: "appends /data/out.log", group: design }
+  - { id: t4pvc, label: "PVC t4-data", sublabel: "100Mi RWO", group: design, shape: cylinder }
+
+  - { id: t5, label: "Deploy t5-web", sublabel: "3x nginx 1.26 -> 1.27 -> undo", group: deploy }
+  - { id: t6svc, label: "Service t6-web", sublabel: "selector version=blue|green", group: deploy }
+  - { id: t6b, label: "t6-blue", sublabel: "nginx:1.26", group: deploy }
+  - { id: t6g, label: "t6-green", sublabel: "nginx:1.27", group: deploy }
+  - { id: t7, label: "t7-probes", sublabel: "startup, readiness, liveness", group: deploy }
+
+  - { id: t8cm, label: "ConfigMap t8-config", sublabel: "+ Secret t8-secret", group: config }
+  - { id: t8pod, label: "t8-config-pod", sublabel: "env + /etc/app", group: config }
+  - { id: t9, label: "t9-secure", sublabel: "SA t9-app, UID 1000, RO root", group: config }
+  - { id: t10q, label: "t10-quota", sublabel: "+ LimitRange t10-defaults", group: config }
+  - { id: t10sa, label: "SA t10-reader", sublabel: "Role t10-pod-reader", group: config }
+
+  - { id: t11ing, label: "Ingress t11-ingress", sublabel: "ckad.lab.local", group: net }
+  - { id: t11svc, label: "Service t11-api", sublabel: "ClusterIP :8080 -> http", group: net }
+  - { id: t11dep, label: "Deploy t11-api", sublabel: "2x nginx :80", group: net }
+  - { id: t12f, label: "t12-frontend", sublabel: "role=frontend", group: net }
+  - { id: t12i, label: "t12-intruder", sublabel: "no role label", group: net }
+  - { id: t12np, label: "NetworkPolicy", sublabel: "t12-api-allow-frontend", group: net, shape: hexagon }
+
+edges:
+  - { from: t4pod, to: t4pvc, label: "mount /data" }
+  - { from: t6svc, to: t6b, label: "before", dashed: true }
+  - { from: t6svc, to: t6g, label: "after patch" }
+  - { from: t8cm, to: t8pod, label: "env + volume" }
+  - { from: curl, to: ingress-nginx, label: ":80" }
+  - { from: ingress-nginx, to: t11ing }
+  - { from: t11ing, to: t11svc }
+  - { from: t11svc, to: t11dep, label: "TCP 80" }
+  - { from: t12f, to: t11svc, label: "allowed" }
+  - { from: t12i, to: t12np, label: "denied", dashed: true }
+  - { from: t12np, to: t11dep, label: "guards" }
+  - { from: cilium, to: t12np, label: "enforces", dashed: true }

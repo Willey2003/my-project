@@ -1,0 +1,49 @@
+# Phase 27 (CBA) - local Backstage demo: PostgreSQL + a Backstage image you build from create-app.
+# Easiest: ./up.sh (creates ./app with create-app, builds the image 'backstage', then runs this file).
+# Manual:  (cd app && yarn install --immutable && yarn tsc && yarn build:backend && yarn build-image)
+#          docker compose up -d ; open http://localhost:7007 and "Enter" as guest
+# The lab config (app-config.lab.yaml) and the lab catalog/templates are mounted read-only, so you edit them
+# here and restart (docker compose restart backstage) - no rebuild needed for catalog or template changes.
+name: backstage-lab
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: backstage
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-backstage-lab}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U backstage"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  backstage:
+    image: ${BACKSTAGE_IMAGE:-backstage:latest}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:7007:7007"
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: backstage
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-backstage-lab}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}          # only needed for a real scaffolder run (publish:github)
+      NODE_OPTIONS: --no-node-snapshot          # required by the scaffolder on Node 20+
+    command:
+      - node
+      - packages/backend
+      - --config
+      - app-config.yaml
+      - --config
+      - app-config.production.yaml
+      - --config
+      - /lab/app-config.lab.yaml
+    volumes:
+      - ./app-config.lab.yaml:/lab/app-config.lab.yaml:ro
+      - ./catalog:/lab/catalog:ro
+      - ./templates:/lab/templates:ro
+volumes:
+  pgdata:

@@ -1,0 +1,71 @@
+# Run from the repo root:  kyverno test lab/golden/kyverno/test
+# (or from this folder: kyverno test .)  Add --detailed-results to see every rule evaluation.
+# Covers the validate policies (01, 02, 05, 06). Mutate/generate tests need patchedResources /
+# generatedResource files - adding one for policy 03 is a Week 2 exercise in ../README.md.
+apiVersion: cli.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: kyverno-lab-policies
+policies:
+  - ../policies/01-require-labels.yaml
+  - ../policies/02-disallow-latest-tag.yaml
+  - ../policies/05-require-requests-limits.yaml
+  - ../policies/06-restrict-image-registries.yaml
+resources:
+  - resources-good.yaml
+  - resources-bad.yaml
+results:
+  # 01 require-labels (Audit in the cluster, but the CLI still reports pass/fail)
+  - policy: require-labels
+    rule: check-required-labels
+    kind: Pod
+    resources: [good-pod, bad-latest-tag, bad-no-resources]
+    result: pass
+  - policy: require-labels
+    rule: check-required-labels
+    kind: Pod
+    resources: [bad-no-labels]
+    result: fail
+  # 02 disallow-latest-tag
+  - policy: disallow-latest-tag
+    rule: require-image-tag
+    kind: Pod
+    resources: [good-pod, bad-latest-tag]
+    result: pass
+  - policy: disallow-latest-tag
+    rule: require-image-tag
+    kind: Pod
+    resources: [bad-no-tag]
+    result: fail
+  - policy: disallow-latest-tag
+    rule: validate-image-tag
+    kind: Pod
+    resources: [good-pod, bad-no-tag]
+    result: pass
+  - policy: disallow-latest-tag
+    rule: validate-image-tag
+    kind: Pod
+    resources: [bad-latest-tag]
+    result: fail
+  # 05 require-requests-limits
+  - policy: require-requests-limits
+    rule: validate-resources
+    kind: Pod
+    resources: [good-pod, bad-registry]
+    result: pass
+  - policy: require-requests-limits
+    rule: validate-resources
+    kind: Pod
+    resources: [bad-no-resources]
+    result: fail
+  # 06 restrict-image-registries
+  - policy: restrict-image-registries
+    rule: validate-registries
+    kind: Pod
+    resources: [good-pod, bad-no-tag]
+    result: pass
+  - policy: restrict-image-registries
+    rule: validate-registries
+    kind: Pod
+    resources: [bad-registry, bad-unqualified-image]
+    result: fail

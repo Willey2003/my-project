@@ -1,0 +1,49 @@
+# PCA (Prometheus) lab: namespace prom-lab scraped and alerted by the kube-prometheus-stack addon.
+# Render: python3 lab/architecture/diagram.py lab/architecture/specs/golden-pca.yaml lab/architecture/
+title: "Golden PCA: Prometheus lab (namespace prom-lab)"
+subtitle: "./lab.sh addon monitoring, then lab/golden/observability/up.sh pca (kubectl apply -k pca)"
+width: 1700
+
+layout:
+  rows:
+    - [promlab, monitoring]
+    - [host]
+
+groups:
+  - { id: promlab, label: "Namespace prom-lab (lab.devops/component: pca)", role: compute }
+  - { id: app, label: "Workloads", role: compute, parent: promlab, cols: 2 }
+  - { id: crs, label: "Operator CRs (label release: kps)", role: platform, parent: promlab, cols: 2 }
+  - { id: monitoring, label: "Namespace monitoring: kube-prometheus-stack (release kps)", role: observability, cols: 2 }
+  - { id: host, label: "Workstation (port-forward / offline checks)", role: host, cols: 4 }
+
+nodes:
+  - { id: code, label: "ConfigMap shop-api-code", sublabel: "app.py, hash suffix", group: app }
+  - { id: shop, label: "shop-api", sublabel: "2 replicas, python:3.12, self-traffic", group: app }
+  - { id: shopsvc, label: "Service shop-api", sublabel: ":8000 http-metrics", group: app }
+  - { id: sink, label: "alert-sink", sublabel: "webhook echo :8080", group: app }
+
+  - { id: sm, label: "ServiceMonitor shop-api", sublabel: "/metrics every 15s", group: crs }
+  - { id: pm, label: "PodMonitor shop-api-pods", sublabel: "disabled (release: disabled)", group: crs }
+  - { id: pr, label: "PrometheusRule shop-api", sublabel: "5 recording rules, 5 alerts", group: crs }
+  - { id: amc, label: "AlertmanagerConfig", sublabel: "warning / critical routes", group: crs }
+
+  - { id: operator, label: "Prometheus Operator", sublabel: "selects release: kps", group: monitoring, shape: hexagon }
+  - { id: prom, label: "Prometheus", sublabel: ":9090", group: monitoring, shape: cylinder }
+  - { id: am, label: "Alertmanager", sublabel: ":9093, patched by up.sh", group: monitoring }
+  - { id: grafana, label: "Grafana", sublabel: ":3000 (svc :80)", group: monitoring }
+
+  - { id: promtool, label: "promtool check rules", sublabel: "rules.yaml", group: host }
+  - { id: amtool, label: "amtool check-config", sublabel: "alertmanager.yaml", group: host }
+  - { id: exercises, label: "promql-exercises.md", sublabel: "25 PromQL tasks", group: host }
+  - { id: pf, label: "kubectl port-forward", sublabel: "9090, 9093, 3000", group: host }
+
+edges:
+  - { from: code, to: shop, label: "mounted /app" }
+  - { from: shopsvc, to: shop }
+  - { from: sm, to: shopsvc, label: "selects app=shop-api", dashed: true }
+  - { from: operator, to: crs, label: "watches", dashed: true }
+  - { from: prom, to: shopsvc, label: "scrape :8000" }
+  - { from: prom, to: am, label: "alerts" }
+  - { from: am, to: sink, label: "/warning, /critical" }
+  - { from: grafana, to: prom, label: "PromQL" }
+  - { from: pf, to: monitoring, dashed: true }

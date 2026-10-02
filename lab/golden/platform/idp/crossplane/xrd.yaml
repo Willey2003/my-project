@@ -1,0 +1,37 @@
+# CONCEPT EXERCISE (see functions.yaml header). The API surface: developers only choose a team and a t-shirt size;
+# every guardrail (labels, quota numbers) is the platform team's decision inside the Composition.
+apiVersion: apiextensions.crossplane.io/v2
+kind: CompositeResourceDefinition
+metadata:
+  name: xteamnamespaces.platform.lab.devops
+spec:
+  group: platform.lab.devops
+  names:
+    kind: XTeamNamespace
+    plural: xteamnamespaces
+  scope: Cluster                # cluster-scoped because it composes a (cluster-scoped) Namespace
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              required: [team]
+              properties:
+                team:
+                  type: string
+                  pattern: '^[a-z0-9-]{2,30}$'
+                  description: Team name; the namespace becomes platform-lab-<team>
+                size:
+                  type: string
+                  enum: [small, medium, large]
+                  default: small
+            status:
+              type: object
+              properties:
+                namespace:
+                  type: string

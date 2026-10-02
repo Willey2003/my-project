@@ -1,0 +1,35 @@
+# Tenant overlay: onboarding team-a = this folder (copy it for team-b and change the 3 marked values).
+#   kubectl kustomize .   -> Namespace platform-lab-team-a with a "small" quota and team-a as editors
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: platform-lab-team-a            # (1) tenant namespace
+resources:
+  - ../../base
+patches:
+  - target: { kind: Namespace }
+    patch: |-
+      - op: replace
+        path: /metadata/labels/team
+        value: team-a                     # (2) team label (cost reports, policies)
+  - target: { kind: RoleBinding, name: tenant-edit }
+    patch: |-
+      - op: replace
+        path: /subjects/0/name
+        value: team-a                     # (3) IdP group that owns the namespace
+  - target: { kind: ResourceQuota, name: tenant-quota }
+    patch: |-
+      - op: replace
+        path: /spec/hard/requests.cpu
+        value: "1"
+      - op: replace
+        path: /spec/hard/requests.memory
+        value: 2Gi
+      - op: replace
+        path: /spec/hard/limits.cpu
+        value: "2"
+      - op: replace
+        path: /spec/hard/limits.memory
+        value: 4Gi
+      - op: replace
+        path: /spec/hard/pods
+        value: "10"

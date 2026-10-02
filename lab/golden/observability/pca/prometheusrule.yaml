@@ -1,0 +1,67 @@
+# PrometheusRule for shop-api. GENERATED from rules.yaml (same groups) - edit rules.yaml and regenerate
+# with the snippet in ../README.md, or keep both in sync by hand. The release: kps label is what the
+# kube-prometheus-stack Prometheus selects on (ruleSelector). Check: kubectl -n prom-lab get prometheusrule
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: shop-api
+  namespace: prom-lab
+  labels:
+    app: shop-api
+    release: kps
+spec:
+  groups:
+  - name: shop-api.recording
+    interval: 30s
+    rules:
+    - record: namespace_job:lab_http_requests:rate5m
+      expr: sum by (namespace, job) (rate(lab_http_requests_total[5m]))
+    - record: namespace_job_code:lab_http_requests:rate5m
+      expr: sum by (namespace, job, code) (rate(lab_http_requests_total[5m]))
+    - record: namespace_job:lab_http_errors:ratio_rate5m
+      expr: "sum by (namespace, job) (rate(lab_http_requests_total{code=~\"5..\"}[5m]))\n  /\nsum by (namespace, job) (rate(lab_http_requests_total[5m]))\n"
+    - record: namespace_job_path:lab_http_request_duration_seconds:p95_rate5m
+      expr: histogram_quantile(0.95, sum by (namespace, job, path, le) (rate(lab_http_request_duration_seconds_bucket[5m])))
+    - record: namespace_job_path:lab_http_request_duration_seconds:mean_rate5m
+      expr: "sum by (namespace, job, path) (rate(lab_http_request_duration_seconds_sum[5m]))\n  /\nsum by (namespace, job, path) (rate(lab_http_request_duration_seconds_count[5m]))\n"
+  - name: shop-api.alerts
+    rules:
+    - alert: ShopApiDown
+      expr: sum by (namespace, job) (up{job="shop-api"}) == 0 or absent(up{job="shop-api", namespace="prom-lab"})
+      for: 2m
+      labels:
+        severity: critical
+      annotations:
+        summary: shop-api has no healthy scrape targets
+        description: No shop-api target in {{ $labels.namespace }} has been up for 2 minutes.
+    - alert: ShopApiHighErrorRate
+      expr: namespace_job:lab_http_errors:ratio_rate5m > 0.05
+      for: 5m
+      keep_firing_for: 2m
+      labels:
+        severity: warning
+      annotations:
+        summary: '{{ $labels.job }} 5xx ratio is {{ $value | humanizePercentage }}'
+        runbook_url: https://example.com/runbooks/shop-api#errors
+    - alert: ShopApiHighErrorRateCritical
+      expr: namespace_job:lab_http_errors:ratio_rate5m > 0.20
+      for: 2m
+      labels:
+        severity: critical
+      annotations:
+        summary: '{{ $labels.job }} 5xx ratio is {{ $value | humanizePercentage }} (critical)'
+        runbook_url: https://example.com/runbooks/shop-api#errors
+    - alert: ShopApiSlowCheckout
+      expr: namespace_job_path:lab_http_request_duration_seconds:p95_rate5m{path="/checkout"} > 1
+      for: 10m
+      labels:
+        severity: warning
+      annotations:
+        summary: p95 /checkout latency is {{ $value | humanizeDuration }}
+    - alert: ShopApiQueueBacklog
+      expr: avg by (namespace, job) (avg_over_time(lab_queue_jobs[10m])) > 30
+      for: 10m
+      labels:
+        severity: warning
+      annotations:
+        summary: checkout queue averages {{ $value | printf "%.0f" }} jobs

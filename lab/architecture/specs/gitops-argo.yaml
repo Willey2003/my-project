@@ -1,0 +1,60 @@
+# GitOps with Argo (weeks 53-55): Argo CD app-of-apps, Argo Rollouts canary with analysis, Argo Workflows DAG, Argo Events controller.
+# Sources: lab/gitops (root-app.yaml, apps/*.yaml, rollouts/canary.yaml, workflows/dag.yaml), lab/k8s/addons/install.sh
+# Render: python3 lab/architecture/diagram.py lab/architecture/specs/gitops-argo.yaml lab/architecture/
+title: "GitOps with Argo on the kind cluster (lab/gitops)"
+subtitle: "./lab.sh addon argocd rollouts workflows; kubectl apply -n argocd -f root-app.yaml, then Argo CD syncs everything else from Git (auto prune + self-heal)"
+width: 1600
+
+layout:
+  rows:
+    - [git, argocd]
+    - [rollouts, shop]
+    - [argo, events]
+
+groups:
+  - { id: git, label: "Git repo (main)", role: host, cols: 1 }
+  - { id: argocd, label: "ns argocd: Argo CD", role: ci, cols: 2 }
+  - { id: shop, label: "ns shop", role: compute, cols: 1 }
+  - { id: rollouts, label: "ns rollouts-demo: Rollout demo (5 replicas)", role: compute, cols: 4 }
+  - { id: argo, label: "ns argo: Argo Workflows (quick-start-minimal)", role: ci, cols: 3 }
+  - { id: events, label: "ns argo-events", role: platform, cols: 1 }
+
+nodes:
+  - { id: repo, label: "lab/gitops + lab/k8s", sublabel: "apps/, rollouts/, manifests/app.yaml", group: git, shape: cylinder }
+
+  - { id: root, label: "Application root", sublabel: "path lab/gitops/apps", group: argocd }
+  - { id: proj, label: "AppProject lab", sublabel: "dest shop, rollouts-demo only", group: argocd }
+  - { id: app-ro, label: "Application rollouts-demo", sublabel: "lab/gitops/rollouts", group: argocd }
+  - { id: app-shop, label: "Application shop", sublabel: "lab/k8s/manifests app.yaml", group: argocd }
+
+  - { id: shopapp, label: "shop api", sublabel: "Deployment, Service, Ingress", group: shop, shape: hexagon }
+
+  - { id: svc, label: "Service demo", sublabel: ":80 -> 8080", group: rollouts }
+  - { id: stable, label: "stable ReplicaSet", sublabel: "rollouts-demo:blue", group: rollouts, shape: hexagon }
+  - { id: canary, label: "canary ReplicaSet", sublabel: "20% -> 50% -> 80% -> 100%", group: rollouts, shape: hexagon }
+  - { id: analysis, label: "AnalysisTemplate smoke-test", sublabel: "curl Job x3, max 1 failure", group: rollouts }
+
+  - { id: generate, label: "generate", sublabel: "seq 1 100 > data.txt", group: argo }
+  - { id: test-a, label: "test-a", sublabel: "wc -l data", group: argo }
+  - { id: report, label: "report", sublabel: "needs test-a + test-b", group: argo }
+  - { id: minio, label: "MinIO", sublabel: "artifact repository", group: argo, shape: cylinder }
+  - { id: test-b, label: "test-b", sublabel: "wc -l data", group: argo }
+  - { id: server, label: "argo-server + controller", sublabel: "argo submit --watch dag.yaml", group: argo }
+
+  - { id: ev, label: "Argo Events controller", sublabel: "installed; no EventSource yet", group: events }
+
+edges:
+  - { from: repo, to: root, label: "watch main" }
+  - { from: root, to: app-ro }
+  - { from: root, to: proj }
+  - { from: proj, to: app-shop, label: "project lab", dashed: true }
+  - { from: app-shop, to: shopapp, label: "sync" }
+  - { from: app-ro, to: rollouts, label: "sync" }
+  - { from: svc, to: stable }
+  - { from: stable, to: canary, label: "set image" }
+  - { from: canary, to: analysis, label: "after 20%" }
+  - { from: generate, to: test-a }
+  - { from: generate, to: test-b }
+  - { from: test-a, to: report }
+  - { from: test-b, to: report }
+  - { from: generate, to: minio, label: "artifact data", dashed: true }

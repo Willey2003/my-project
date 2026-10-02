@@ -1,0 +1,43 @@
+# Week 55: Argo Workflows DAG with artifact passing (needs the 'workflows' addon: quick-start-minimal ships MinIO).
+#   argo submit -n argo --watch dag.yaml     (or kubectl create -n argo -f dag.yaml)
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: build-test-report-
+spec:
+  entrypoint: pipeline
+  templates:
+    - name: pipeline
+      dag:
+        tasks:
+          - name: generate
+            template: generate
+          - name: test-a
+            template: consume
+            dependencies: [generate]
+            arguments:
+              artifacts: [{ name: data, from: "{{tasks.generate.outputs.artifacts.data}}" }]
+          - name: test-b
+            template: consume
+            dependencies: [generate]
+            arguments:
+              artifacts: [{ name: data, from: "{{tasks.generate.outputs.artifacts.data}}" }]
+          - name: report
+            template: report
+            dependencies: [test-a, test-b]
+    - name: generate
+      container:
+        image: busybox:1.36
+        command: [sh, -c, "seq 1 100 > /tmp/data.txt"]
+      outputs:
+        artifacts: [{ name: data, path: /tmp/data.txt }]
+    - name: consume
+      inputs:
+        artifacts: [{ name: data, path: /tmp/in.txt }]
+      container:
+        image: busybox:1.36
+        command: [sh, -c, "wc -l /tmp/in.txt"]
+    - name: report
+      container:
+        image: busybox:1.36
+        command: [echo, "all tests passed"]

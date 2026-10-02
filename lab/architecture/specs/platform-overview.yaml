@@ -1,0 +1,156 @@
+# Whole study-kit platform: every environment ./lab.sh drives, and every Kubernetes namespace by track.
+# Render: python3 lab/architecture/diagram.py lab/architecture/specs/platform-overview.yaml lab/architecture/
+title: "DevOps study kit: platform overview"
+subtitle: "One entry point (lab/lab.sh) drives every environment; one Kubernetes namespace per lab component"
+width: 1760
+
+layout:
+  rows:
+    - [workstation, vagrant, compose, cicd]
+    - [capstone, aisec, openshift, aws]
+    - [kind]
+
+groups:
+  # ---- host -----------------------------------------------------------------------------------
+  - { id: workstation, label: "Host workstation", role: host, cols: 1 }
+  - { id: vagrant, label: "Vagrant VMs: RHCSA / RHCE (vms up)", role: compute, cols: 1 }
+  - { id: compose, label: "Docker Compose 3-tier (compose up)", role: compute, cols: 2 }
+  - { id: cicd, label: "GitHub Actions (wk 21-22)", role: ci, cols: 2 }
+
+  # ---- later phases ---------------------------------------------------------------------------
+  - { id: aws, label: "AWS via Terraform (aws apply)", role: external }
+  - { id: vpc, label: "VPC 10.20.0.0/16", role: network, parent: aws, cols: 3 }
+  - { id: aws-ops, label: "IAM + monitoring", role: security, parent: aws, cols: 1 }
+  - { id: openshift, label: "OpenShift Local (crc)", role: platform, cols: 1 }
+  - { id: aisec, label: "AI-security sandbox (ai up)", role: security, cols: 2 }
+  - { id: capstone, label: "Capstone copilot (capstone up)", role: data, cols: 1 }
+
+  # ---- kind -----------------------------------------------------------------------------------
+  - { id: kind, label: "kind cluster 'lab': 1 control plane + 2 workers (kind up [basic|cilium|security|mesh], addon <name>)", role: platform }
+  - { id: addon-net, label: "Ingress / mesh add-ons", role: network, parent: kind, cols: 1 }
+  - { id: addon-gitops, label: "GitOps add-ons", role: ci, parent: kind, cols: 2 }
+  - { id: addon-sec, label: "Security add-ons", role: security, parent: kind, cols: 2 }
+  - { id: addon-obs, label: "Observability", role: observability, parent: kind, cols: 1 }
+  - { id: core, label: "Core path namespaces (KCNA, CKA, CKAD, KCSA, CKS, CAPA, ICA)", role: compute, parent: kind, cols: 6 }
+  - { id: golden, label: "Golden Kubestronaut namespaces", role: compute, parent: kind, cols: 4 }
+
+nodes:
+  # host
+  - { id: labsh, label: "./lab.sh", sublabel: "drives every lab", group: workstation }
+  - { id: registry, label: "Local registry", sublabel: "localhost:5001", group: workstation, shape: cylinder }
+  - { id: host-ollama, label: "Ollama on host", sublabel: ":11434", group: workstation }
+
+  - { id: control, label: "control", sublabel: "192.168.56.10 Ansible", group: vagrant }
+  - { id: node1, label: "node1", sublabel: "192.168.56.11 +2 disks", group: vagrant }
+  - { id: node2, label: "node2", sublabel: "192.168.56.12 +2 disks", group: vagrant }
+
+  - { id: web, label: "web (nginx)", sublabel: ":8080 front net", group: compose }
+  - { id: api, label: "api (lab-api)", sublabel: "front + back net", group: compose }
+  - { id: trivy, label: "Trivy scan", sublabel: "compose scan", group: compose }
+  - { id: db, label: "db postgres:17", sublabel: "back net, internal", group: compose, shape: cylinder }
+
+  - { id: ci-yml, label: "ci.yml", sublabel: "pytest matrix", group: cicd }
+  - { id: release-yml, label: "release.yml", sublabel: "build + Trivy", group: cicd }
+  - { id: oidc-yml, label: "aws-oidc-example", sublabel: "no static keys", group: cicd }
+  - { id: ghcr, label: "GHCR", sublabel: "ghcr.io/<you>/lab-api", group: cicd, shape: cloud }
+
+  - { id: alb, label: "ALB", sublabel: "public subnets :80", group: vpc }
+  - { id: ecs, label: "ECS Fargate service", sublabel: "private subnets", group: vpc }
+  - { id: nat, label: "NAT gateway", sublabel: "optional", group: vpc }
+  - { id: iam-oidc, label: "IAM OIDC role", sublabel: "github_deployer", group: aws-ops }
+  - { id: cloudwatch, label: "CloudWatch + SNS", sublabel: "alarms, budget", group: aws-ops }
+
+  - { id: crc, label: "CRC cluster", sublabel: "16 GiB, RHACS labs", group: openshift, shape: hexagon }
+  - { id: team-a, label: "team-a", sublabel: "quotas, SCC, RBAC", group: openshift, shape: hexagon }
+
+  - { id: scanner, label: "scanner", sublabel: "garak, mock agent", group: aisec }
+  - { id: aisec-ollama, label: "ollama", sublabel: "internal net only", group: aisec }
+  - { id: puller, label: "puller", sublabel: "egress, pull profile", group: aisec }
+  - { id: model-store, label: "ollama volume", sublabel: "llama3.2:1b", group: aisec, shape: cylinder }
+
+  - { id: copilot-api, label: "copilot API", sublabel: "FastAPI :8088", group: capstone }
+  - { id: qdrant, label: "Qdrant", sublabel: ":6333 vectors", group: capstone, shape: cylinder }
+
+  # kind add-ons
+  - { id: ingress-nginx, label: "ingress-nginx", group: addon-net, shape: hexagon }
+  - { id: envoy-gw, label: "envoy-gateway-system", sublabel: "Gateway API", group: addon-net, shape: hexagon }
+  - { id: istio-system, label: "istio-system", sublabel: "istiod", group: addon-net, shape: hexagon }
+  - { id: argocd, label: "argocd", group: addon-gitops, shape: hexagon }
+  - { id: argo-rollouts, label: "argo-rollouts", group: addon-gitops, shape: hexagon }
+  - { id: argo, label: "argo / argo-events", sublabel: "workflows, events", group: addon-gitops, shape: hexagon }
+  - { id: flux-system, label: "flux-system", sublabel: "golden/platform", group: addon-gitops, shape: hexagon }
+  - { id: crossplane, label: "crossplane-system", sublabel: "golden/platform", group: addon-gitops, shape: hexagon }
+  - { id: falco, label: "falco", sublabel: "modern eBPF", group: addon-sec, shape: hexagon }
+  - { id: kube-system, label: "kube-system", sublabel: "Cilium, Tetragon", group: addon-sec, shape: hexagon }
+  - { id: gatekeeper, label: "gatekeeper-system", group: addon-sec, shape: hexagon }
+  - { id: kyverno, label: "kyverno", group: addon-sec, shape: hexagon }
+  - { id: cosign, label: "cosign-system", sublabel: "policy-controller", group: addon-sec, shape: hexagon }
+  - { id: monitoring, label: "monitoring", sublabel: "kube-prometheus-stack", group: addon-obs, shape: hexagon }
+
+  # core path
+  - { id: shop, label: "shop", sublabel: "app, RBAC, netpol", group: core, shape: hexagon }
+  - { id: ckad-patterns, label: "ckad-patterns", sublabel: "init, sidecar, jobs", group: core, shape: hexagon }
+  - { id: cka-storage, label: "cka-storage", sublabel: "PVC, StatefulSet", group: core, shape: hexagon }
+  - { id: trouble, label: "trouble", sublabel: "11 break-fix drills", group: core, shape: hexagon }
+  - { id: cks-bench, label: "cks-bench", sublabel: "kube-bench", group: core, shape: hexagon }
+  - { id: cks-runtime, label: "cks-runtime", sublabel: "Tetragon test", group: core, shape: hexagon }
+  - { id: secure, label: "secure", sublabel: "signed images only", group: core, shape: hexagon }
+  - { id: psa-restricted, label: "psa-restricted", sublabel: "PSA restricted", group: core, shape: hexagon }
+  - { id: psa-baseline, label: "psa-baseline", sublabel: "PSA baseline", group: core, shape: hexagon }
+  - { id: rollouts-demo, label: "rollouts-demo", sublabel: "canary", group: core, shape: hexagon }
+  - { id: mesh-bookinfo, label: "mesh-bookinfo", sublabel: "bookinfo, mTLS", group: core, shape: hexagon }
+
+  # golden
+  - { id: ckad-lab, label: "ckad-lab", sublabel: "CKAD tasks", group: golden, shape: hexagon }
+  - { id: prom-lab, label: "prom-lab", sublabel: "PCA", group: golden, shape: hexagon }
+  - { id: otel-lab, label: "otel-lab", sublabel: "OTCA, Jaeger", group: golden, shape: hexagon }
+  - { id: cilium-lab, label: "cilium-lab", sublabel: "CCA, L3-L7 policy", group: golden, shape: hexagon }
+  - { id: kyverno-lab, label: "kyverno-lab", sublabel: "KCA", group: golden, shape: hexagon }
+  - { id: flux-lab, label: "flux-lab", sublabel: "CGOA, podinfo", group: golden, shape: hexagon }
+  - { id: backstage-lab, label: "backstage-lab", sublabel: "CBA", group: golden, shape: hexagon }
+  - { id: platform-lab, label: "platform-lab", sublabel: "CNPA / CNPE", group: golden, shape: hexagon }
+
+edges:
+  # lab.sh drives every environment: the command is in each group's label
+  - { from: registry, to: kind, label: "images", dashed: true }
+
+  # VMs
+  - { from: control, to: node1, label: "ansible ssh" }
+  - { from: control, to: node2, label: "ansible ssh" }
+
+  # compose
+  - { from: web, to: api, label: "proxy" }
+  - { from: api, to: db, label: "5432" }
+  - { from: trivy, to: api, label: "scan", dashed: true }
+
+  # CI
+  - { from: ci-yml, to: release-yml, label: "reused" }
+  - { from: release-yml, to: ghcr, label: "push" }
+  - { from: release-yml, to: node1, label: "deploy (opt.)", dashed: true }
+  - { from: oidc-yml, to: iam-oidc, label: "OIDC assume" }
+  - { from: ghcr, to: ecs, label: "image", dashed: true }
+
+  # AWS
+  - { from: alb, to: ecs, label: "HTTP" }
+  - { from: ecs, to: nat, label: "egress", dashed: true }
+  - { from: ecs, to: cloudwatch, label: "logs" }
+
+  # AI / capstone
+  - { from: scanner, to: aisec-ollama, label: "probes" }
+  - { from: puller, to: model-store, label: "pull" }
+  - { from: aisec-ollama, to: model-store }
+  - { from: copilot-api, to: qdrant, label: "RAG" }
+  - { from: copilot-api, to: host-ollama, label: "embed + chat" }
+
+  # OpenShift
+  - { from: crc, to: team-a }
+
+  # inside kind
+  - { from: ingress-nginx, to: shop, label: "Ingress" }
+  - { from: istio-system, to: mesh-bookinfo, label: "sidecars" }
+  - { from: argo-rollouts, to: rollouts-demo, label: "canary" }
+  - { from: cosign, to: secure, label: "verify sigs" }
+  - { from: kube-system, to: cks-runtime, label: "enforce" }
+  - { from: monitoring, to: prom-lab, label: "scrape" }
+  - { from: flux-system, to: flux-lab, label: "reconcile" }
+  - { from: kyverno, to: kyverno-lab, label: "policies" }

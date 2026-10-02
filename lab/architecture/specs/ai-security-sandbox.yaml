@@ -1,0 +1,47 @@
+# AI / LLM security sandbox (weeks 59-66): compose project aisec, internal lab network, Ollama, scanner tools, one-shot puller.
+# Sources: lab/ai-security (compose.yaml, Dockerfile, garak-ollama.sh, mock_agent.py, README.md)
+# Render: python3 lab/architecture/diagram.py lab/architecture/specs/ai-security-sandbox.yaml lab/architecture/
+title: "AI / LLM security sandbox (lab/ai-security)"
+subtitle: "Compose project aisec: the model is pulled once over the egress network, then Ollama and the scanner run on an internal network with no internet and only mock tools"
+width: 1600
+
+layout:
+  rows:
+    - [egress, internet]
+    - [lab]
+    - [deliver]
+
+groups:
+  - { id: internet, label: "Internet (only during the pull)", role: external, cols: 2 }
+  - { id: egress, label: "network egress (profile pull)", role: network, cols: 1 }
+  - { id: lab, label: "network lab (internal: true, no internet)", role: security }
+  - { id: model, label: "model server", role: compute, parent: lab, cols: 1 }
+  - { id: scanner, label: "scanner container (profile tools, Dockerfile: python 3.12-slim)", role: security, parent: lab, cols: 2 }
+  - { id: deliver, label: "Week 59-66 deliverables", role: ci, cols: 4 }
+
+nodes:
+  - { id: registry, label: "ollama.com registry", sublabel: "llama3.2:1b (MODEL)", group: internet, shape: cloud }
+  - { id: pypi, label: "PyPI", sublabel: "garak, pyrit, modelscan (build once)", group: internet, shape: cloud }
+
+  - { id: puller, label: "puller", sublabel: "ollama serve + pull, then exits", group: egress }
+
+  - { id: vol, label: "volume ollama", sublabel: "/root/.ollama (models)", group: model, shape: cylinder }
+  - { id: ollama, label: "ollama", sublabel: ":11434, /api/chat, /v1", group: model, shape: hexagon }
+
+  - { id: pyrit, label: "PyRIT", sublabel: "OpenAI-compatible /v1", group: scanner }
+  - { id: agent, label: "mock_agent.py [--guard]", sublabel: "indirect injection, mock send_email", group: scanner }
+  - { id: modelscan, label: "ModelScan", sublabel: "pickle payload check", group: scanner }
+  - { id: garak, label: "garak-ollama.sh", sublabel: "promptinject, dan, encoding, leakreplay", group: scanner }
+
+  - { id: threat, label: "LLM threat model", sublabel: "OWASP LLM Top 10, MITRE ATLAS", group: deliver }
+  - { id: opa, label: "OPA gate", sublabel: "require model-scan: passed", group: deliver }
+  - { id: ci, label: "ModelScan CI step", sublabel: "../cicd ci.yml", group: deliver }
+  - { id: reports, label: "reports/", sublabel: "garak HTML + remediation notes", group: deliver, shape: cylinder }
+
+edges:
+  - { from: puller, to: registry, label: "pull" }
+  - { from: puller, to: vol, label: "writes model", dashed: true }
+  - { from: vol, to: ollama }
+  - { from: scanner, to: ollama, label: "HTTP :11434" }
+  - { from: garak, to: reports, label: "report" }
+  - { from: pypi, to: scanner, label: "docker build", dashed: true }

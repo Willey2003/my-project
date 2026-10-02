@@ -1,0 +1,77 @@
+# Kubernetes core labs (lab/k8s): kind profiles and nodes, add-ons, the shop app, pod patterns, storage, break-fix.
+# Render: python3 lab/architecture/diagram.py lab/architecture/specs/kubernetes-core.yaml lab/architecture/
+title: "Kubernetes core labs (lab/k8s)"
+subtitle: "./lab.sh kind up [basic|cilium|security|mesh] builds cluster 'lab'; ./lab.sh addon <name> and ./lab.sh break <scenario> work on it"
+width: 1600
+
+layout:
+  rows:
+    - [host, profiles]
+    - [kind]
+
+groups:
+  - { id: host, label: "Host workstation", role: host, cols: 3 }
+  - { id: profiles, label: "kind profiles (k8s/kind/*.yaml)", role: platform, cols: 2 }
+  - { id: kind, label: "kind cluster 'lab'", role: platform }
+  - { id: trouble, label: "ns trouble (break-fix)", role: security, parent: kind, cols: 1 }
+  - { id: nodes, label: "Nodes", role: compute, parent: kind, cols: 1 }
+  - { id: patterns, label: "ns ckad-patterns", role: compute, parent: kind, cols: 1 }
+  - { id: storage, label: "ns cka-storage", role: data, parent: kind, cols: 1 }
+  - { id: addons, label: "Add-ons (k8s/addons/install.sh)", role: network, parent: kind, cols: 1 }
+  - { id: shop, label: "ns shop (PSA restricted): app.yaml + rbac-netpol.yaml", role: compute, parent: kind, cols: 2 }
+
+nodes:
+  # host
+  - { id: breaksh, label: "break.sh", sublabel: "list, hint, random, reset", group: host }
+  - { id: registry, label: "kind-registry", sublabel: "localhost:5001", group: host, shape: cylinder }
+  - { id: labsh, label: "./lab.sh", sublabel: "kind up / addon / break", group: host }
+
+  # profiles
+  - { id: p-basic, label: "basic (default)", sublabel: "kindnet, 1 CP + 2 workers", group: profiles }
+  - { id: p-cilium, label: "cilium", sublabel: "no default CNI, Cilium", group: profiles }
+  - { id: p-security, label: "security", sublabel: "Cilium, Tetragon, Falco, audit log", group: profiles }
+  - { id: p-mesh, label: "mesh", sublabel: "3 workers, Istio", group: profiles }
+
+  # nodes
+  - { id: cp, label: "lab-control-plane", sublabel: "ingress-ready, :80 :443 :30000", group: nodes, shape: hexagon }
+  - { id: workers, label: "lab-worker, lab-worker2", sublabel: "tier=general, disktype=ssd", group: nodes, shape: hexagon }
+
+  # add-ons
+  - { id: ingress, label: "ingress-nginx", sublabel: "addon ingress", group: addons, shape: hexagon }
+  - { id: metrics, label: "metrics-server", sublabel: "kube-system", group: addons, shape: hexagon }
+  - { id: cilium, label: "Cilium CNI", sublabel: "enforces NetworkPolicy", group: addons, shape: hexagon }
+
+  # shop
+  - { id: shop-ing, label: "Ingress api", sublabel: "api.localtest.me", group: shop }
+  - { id: shop-svc, label: "Service api", sublabel: ":80 -> 8000", group: shop }
+  - { id: shop-deploy, label: "Deployment api x3", sublabel: "probes, limits, PDB min 2", group: shop }
+  - { id: shop-cfg, label: "ConfigMap + Secret", sublabel: "api-config, api-secret", group: shop }
+  - { id: shop-rbac, label: "SA ci-deployer", sublabel: "Role deployer (patch deploys)", group: shop }
+  - { id: shop-netpol, label: "NetworkPolicies", sublabel: "default-deny, allow ingress, DNS", group: shop }
+
+  # patterns
+  - { id: pat-pod, label: "Pod patterns", sublabel: "init + native sidecar", group: patterns }
+  - { id: pat-jobs, label: "Job pi + CronJob report", sublabel: "*/5 min", group: patterns }
+
+  # storage
+  - { id: sts, label: "StatefulSet web x2", sublabel: "headless Service web", group: storage }
+  - { id: pvc, label: "PVCs (standard)", sublabel: "local-path provisioner", group: storage, shape: cylinder }
+
+  # trouble
+  - { id: faults, label: "11 injected faults", sublabel: "crashloop, pending, dns, netpol ...", group: trouble }
+  - { id: node-faults, label: "Node faults", sublabel: "scheduler, kubelet on worker2", group: trouble }
+
+edges:
+  - { from: labsh, to: profiles, label: "kind up" }
+  - { from: profiles, to: kind, label: "create cluster" }
+  - { from: registry, to: nodes, label: "images", dashed: true }
+  - { from: labsh, to: addons, label: "addon", dashed: true }
+  - { from: breaksh, to: trouble, label: "inject" }
+  - { from: ingress, to: shop-ing, label: "route" }
+  - { from: shop-ing, to: shop-svc }
+  - { from: shop-svc, to: shop-deploy }
+  - { from: shop-cfg, to: shop-deploy, label: "envFrom" }
+  - { from: shop-rbac, to: shop-deploy, label: "patch", dashed: true }
+  - { from: cilium, to: shop-netpol, label: "enforce", dashed: true }
+  - { from: sts, to: pvc, label: "volumeClaimTemplates" }
+  - { from: node-faults, to: cp, label: "break", dashed: true }

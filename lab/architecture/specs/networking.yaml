@@ -1,0 +1,57 @@
+# Networking labs (weeks 6-8): namespace-routed network, HAProxy L4 vs L7, subnetting drills.
+# Sources: lab/networking. The netns lab runs inside a lab VM (./lab.sh vms up, then /lab/networking).
+# Render: python3 lab/architecture/diagram.py lab/architecture/specs/networking.yaml lab/architecture/
+title: "Networking labs: netns router, HAProxy, subnetting"
+subtitle: "netns-lab.sh builds two LANs and a router on one VM (broken on purpose); haproxy-lab.yml compares L7 and L4 balancing"
+width: 1600
+
+layout:
+  rows:
+    - [netns]
+    - [haproxy, drills]
+
+groups:
+  - { id: netns, label: "Lab VM, e.g. node1: sudo /lab/networking/netns-lab.sh up | down | status", role: host }
+  - { id: lan-a, label: "netns a1: lan-a 10.0.1.0/24", role: network, parent: netns, cols: 1 }
+  - { id: router, label: "netns router", role: security, parent: netns, cols: 2 }
+  - { id: lan-b, label: "netns b1: lan-b 10.0.2.0/24", role: network, parent: netns, cols: 1 }
+
+  - { id: haproxy, label: "HAProxy lab: docker compose -f haproxy-lab.yml up -d", role: compute }
+  - { id: hp-client, label: "Host", role: external, parent: haproxy, cols: 1 }
+  - { id: hp-lb, label: "lb: haproxy:lts-alpine", role: network, parent: haproxy, cols: 1 }
+  - { id: hp-web, label: "Backends, check GET /", role: compute, parent: haproxy, cols: 1 }
+  - { id: drills, label: "subnetting-drills.py (week 6)", role: data, cols: 1 }
+
+nodes:
+  # netns lab
+  - { id: a1, label: "a1-eth0", sublabel: "10.0.1.10/24, curl, dig", group: lan-a }
+  - { id: r0, label: "r-eth0", sublabel: "10.0.1.1/24", group: router }
+  - { id: r1, label: "r-eth1", sublabel: "10.0.2.1/24, tcpdump", group: router }
+  - { id: fwd, label: "ip_forward + nftables", sublabel: "allow tcp/80 a1 to b1, masquerade", group: router }
+  - { id: dns, label: "dnsmasq", sublabel: "web.lab -> 10.0.2.10", group: router }
+  - { id: b1, label: "b1-eth0", sublabel: "10.0.2.10/24, :80", group: lan-b }
+
+  # haproxy
+  - { id: client, label: "curl / browser", sublabel: "host localhost", group: hp-client, shape: cloud }
+  - { id: l7, label: "frontend http_in", sublabel: ":8080 mode http, X-LB header", group: hp-lb }
+  - { id: l4, label: "frontend tcp_in", sublabel: ":8081 mode tcp", group: hp-lb }
+  - { id: stats, label: "frontend stats", sublabel: ":8404 /stats", group: hp-lb }
+  - { id: web1, label: "web1", sublabel: "nginxdemos/hello :80", group: hp-web }
+  - { id: web2, label: "web2", sublabel: "nginxdemos/hello :80", group: hp-web }
+
+  # drills
+  - { id: host-drill, label: "Host drills", sublabel: "random /16 to /30: network, broadcast, mask", group: drills }
+  - { id: vlsm, label: "VLSM drills", sublabel: "carve 172.16.0.0/22, largest first", group: drills }
+
+edges:
+  - { from: a1, to: r0, label: "veth pair" }
+  - { from: r1, to: b1, label: "veth pair" }
+  - { from: r0, to: fwd, label: "forward" }
+  - { from: fwd, to: r1 }
+  - { from: a1, to: dns, label: "dig @10.0.1.1", dashed: true }
+
+  - { from: client, to: l7, label: "HTTP" }
+  - { from: client, to: l4, label: "TCP" }
+  - { from: client, to: stats, label: "stats", dashed: true }
+  - { from: l7, to: hp-web, label: "roundrobin" }
+  - { from: l4, to: hp-web, label: "leastconn" }

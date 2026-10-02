@@ -1,0 +1,59 @@
+# Linux / RHCSA / RHCE / networking lab: 1 Ansible control node + 2 managed nodes.
+#
+#   cd vagrant && VAGRANT_EXPERIMENTAL=disks vagrant up      (or: ../lab.sh vms up)
+#
+# Box: AlmaLinux is a free, binary-compatible RHEL rebuild. For the real exam feel,
+# swap in a RHEL 10 box registered with your free Red Hat Developer subscription:
+#   LAB_BOX=generic/rhel10 vagrant up   (then: sudo subscription-manager register)
+# Provider: VirtualBox by default; libvirt/KVM works too (vagrant plugin install vagrant-libvirt).
+#
+# RAM budget: control 2 GiB + 2 x 2 GiB nodes = 6 GiB. Lower with LAB_MEM=1536.
+
+BOX     = ENV.fetch("LAB_BOX", "almalinux/10")
+MEM     = ENV.fetch("LAB_MEM", "2048").to_i
+CPUS    = ENV.fetch("LAB_CPUS", "2").to_i
+NET     = "192.168.56"
+
+# control is defined last so node1/node2 are up when it pushes SSH keys to them.
+NODES = {
+  "node1"   => { ip: "#{NET}.11", disks: 2 },   # spare disks for LVM / partitioning labs
+  "node2"   => { ip: "#{NET}.12", disks: 2 },
+  "control" => { ip: "#{NET}.10", disks: 0 },
+}
+
+Vagrant.configure("2") do |config|
+  config.vm.box = BOX
+  config.vm.box_check_update = false
+  config.ssh.insert_key = true
+
+  # One-way copy of the whole lab kit into every VM at /lab (re-sync with `vagrant rsync`).
+  config.vm.synced_folder "..", "/lab", type: "rsync",
+    rsync__exclude: [".git/", "vagrant/.vagrant/", "aws/terraform/.terraform/"]
+  config.vm.synced_folder ".", "/vagrant", disabled: true
+
+  NODES.each do |name, spec|
+    config.vm.define name, primary: name == "control" do |node|
+      node.vm.hostname = "#{name}.lab.example.com"
+      node.vm.network "private_network", ip: spec[:ip]
+
+      node.vm.provider "virtualbox" do |vb|
+        vb.name   = "devops-lab-#{name}"
+        vb.memory = MEM
+        vb.cpus   = CPUS
+        vb.linked_clone = true
+      end
+      node.vm.provider "libvirt" do |lv|
+        lv.memory = MEM
+        lv.cpus   = CPUS
+        spec[:disks].times { lv.storage :file, size: "5G" }
+      end
+      # VirtualBox extra disks (needs VAGRANT_EXPERIMENTAL=disks)
+      spec[:disks].times do |i|
+        node.vm.disk :disk, name: "#{name}-extra#{i + 1}", size: "5GB"
+      end
+
+      node.vm.provision "shell", path: "bootstrap/common.sh", args: [NET]
+      node.vm.provision "shell", path: "bootstrap/control.sh" if name == "control"
+    end
+  end
+end

@@ -1,0 +1,11 @@
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!terraform.tfvars.example
+cosign.key
+ansible/secrets.yml
+vagrant/.vagrant/
+__pycache__/
+.pytest_cache/
+ai-security/reports/

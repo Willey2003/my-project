@@ -1,0 +1,53 @@
+# Raw Alertmanager configuration (the format of alertmanager.yml) for study and amtool:
+#   amtool check-config alertmanager.yaml
+#   amtool config routes show --config.file=alertmanager.yaml
+#   amtool config routes test --config.file=alertmanager.yaml severity=critical namespace=prom-lab   -> shop-critical
+# In the cluster the same intent is expressed by alertmanagerconfig.yaml (AlertmanagerConfig CR).
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: default-null                 # top-level route = catch-all default
+  group_by: [alertname, namespace, job]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    - receiver: default-null             # Watchdog is always firing by design (dead man's switch)
+      matchers: ['alertname="Watchdog"']
+    - matchers: ['namespace="prom-lab"']
+      receiver: shop-warning
+      routes:
+        - matchers: ['severity="critical"']
+          receiver: shop-critical
+          group_wait: 10s
+          repeat_interval: 1h
+          continue: true                 # also let the next sibling see it
+        - matchers: ['severity=~"warning|critical"']
+          receiver: shop-warning
+          mute_time_intervals: [nights]  # warnings are not sent at night
+
+inhibit_rules:
+  - source_matchers: ['severity="critical"']
+    target_matchers: ['severity="warning"']
+    equal: [namespace, job]              # critical mutes warning for the same service
+  - source_matchers: ['alertname="ShopApiDown"']
+    target_matchers: ['alertname=~"ShopApi.+"', 'alertname!="ShopApiDown"']
+    equal: [namespace]
+
+receivers:
+  - name: default-null
+  - name: shop-warning
+    webhook_configs:
+      - url: http://alert-sink.prom-lab.svc:8080/warning
+        send_resolved: true
+  - name: shop-critical
+    webhook_configs:
+      - url: http://alert-sink.prom-lab.svc:8080/critical
+        send_resolved: true
+    # a real team would add pagerduty_configs / slack_configs here
+
+time_intervals:
+  - name: nights
+    time_intervals:
+      - times: [{ start_time: "22:00", end_time: "24:00" }, { start_time: "00:00", end_time: "07:00" }]

@@ -1,0 +1,58 @@
+# Golden Kubestronaut roadmap: the 16 certifications in the order the kit plans them, each with its lab and namespace.
+# Source: study-guides/30-golden-kubestronaut.md
+# Render: python3 lab/architecture/diagram.py lab/architecture/specs/golden-kubestronaut-map.yaml lab/architecture/
+title: "Golden Kubestronaut roadmap: 16 certifications, in order"
+subtitle: "Core path (phases 8-18) then Golden track G1-G9 (13 Apr - 14 Jul 2027). Each box: exam target, lab dir / namespace"
+width: 1800
+
+layout:
+  rows:
+    - [core]
+    - [golden]
+
+groups:
+  - { id: core, label: "Core path (phases 8-18): Kubestronaut certs + CAPA, ICA", role: platform }
+  - { id: k8s, label: "Kubernetes", role: platform, parent: core, cols: 1 }
+  - { id: sec, label: "Security", role: platform, parent: core, cols: 1 }
+  - { id: deliv, label: "Delivery + mesh", role: platform, parent: core, cols: 1 }
+  - { id: golden, label: "Golden track G1-G9 (lab/golden/, one kind cluster: ./lab.sh kind up cilium)", role: security }
+  - { id: linux, label: "G1 Linux", role: host, parent: golden, cols: 1 }
+  - { id: obs, label: "G2-G3 Observability", role: observability, parent: golden, cols: 1 }
+  - { id: pol, label: "G4-G5 Network + policy", role: security, parent: golden, cols: 1 }
+  - { id: plat, label: "G6-G9 Platform", role: ci, parent: golden, cols: 2 }
+
+nodes:
+  - { id: kcna, label: "1. KCNA (phase 8)", sublabel: "2 Dec 2026; lab/k8s / shop", group: k8s }
+  - { id: cka, label: "2. CKA (phase 9)", sublabel: "13 Dec 2026; lab/k8s / cka-storage, trouble", group: k8s }
+  - { id: ckad, label: "3. CKAD (phase 10)", sublabel: "21 Dec 2026; golden/ckad / ckad-lab", group: k8s }
+  - { id: kcsa, label: "4. KCSA (phase 14)", sublabel: "31 Jan 2027; lab/security / secure", group: sec }
+  - { id: cks, label: "5. CKS (phase 15)", sublabel: "12 Feb 2027; lab/security / cks-bench, cks-runtime", group: sec }
+  - { id: capa, label: "6. CAPA (phase 17)", sublabel: "26 Feb 2027; lab/gitops / rollouts-demo", group: deliv }
+  - { id: ica, label: "7. ICA (phase 18)", sublabel: "6 Mar 2027; lab/mesh / mesh-bookinfo", group: deliv }
+
+  - { id: lfcs, label: "8. LFCS (G1)", sublabel: "22 Apr 2027; golden/lfcs (Ubuntu VMs, no ns)", group: linux }
+  - { id: pca, label: "9. PCA (G2)", sublabel: "6 May 2027; observability/pca / prom-lab", group: obs }
+  - { id: otca, label: "10. OTCA (G3)", sublabel: "16 May 2027; observability/otel / otel-lab", group: obs }
+  - { id: cca, label: "11. CCA (G4)", sublabel: "30 May 2027; golden/cilium / cilium-lab", group: pol }
+  - { id: kca, label: "12. KCA (G5)", sublabel: "9 Jun 2027; golden/kyverno / kyverno-lab", group: pol }
+  - { id: cgoa, label: "13. CGOA (G6)", sublabel: "16 Jun 2027; platform/flux / flux-lab", group: plat }
+  - { id: cba, label: "14. CBA (G7)", sublabel: "26 Jun 2027; platform/backstage / backstage-lab", group: plat }
+  - { id: cnpa, label: "15. CNPA (G8)", sublabel: "3 Jul 2027; platform/idp / platform-lab", group: plat }
+  - { id: cnpe, label: "16. CNPE (G9)", sublabel: "14 Jul 2027; platform/idp / platform-lab", group: plat }
+
+edges:
+  - { from: kcna, to: cka }
+  - { from: cka, to: ckad }
+  - { from: ckad, to: kcsa }
+  - { from: kcsa, to: cks }
+  - { from: cks, to: capa }
+  - { from: capa, to: ica }
+  - { from: ica, to: lfcs, label: "G1 starts 13 Apr 2027" }
+  - { from: lfcs, to: pca }
+  - { from: pca, to: otca }
+  - { from: otca, to: cca }
+  - { from: cca, to: kca }
+  - { from: kca, to: cgoa }
+  - { from: cgoa, to: cba }
+  - { from: cba, to: cnpa }
+  - { from: cnpa, to: cnpe }

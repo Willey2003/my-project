@@ -1,0 +1,49 @@
+# Phase 26 (CGOA) - OPTIONAL image automation example. Only works after `flux bootstrap ... --read-write-key`
+# (or `flux install --components-extra=image-reflector-controller,image-automation-controller` plus a writable GitRepository).
+# It watches ghcr.io/stefanprodan/podinfo, picks the newest 6.x tag and commits it to YOUR repo wherever it finds the marker:
+#   image: ghcr.io/stefanprodan/podinfo:6.5.0 # {"$imagepolicy": "flux-lab:podinfo"}
+# Set spec.sourceRef below to the GitRepository that points at your fleet repo (bootstrap names it flux-system in ns flux-system).
+# API version: image.toolkit.fluxcd.io/v1 since Flux 2.7; on older Flux use v1beta2.
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageRepository
+metadata:
+  name: podinfo
+  namespace: flux-lab
+spec:
+  image: ghcr.io/stefanprodan/podinfo
+  interval: 5m
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImagePolicy
+metadata:
+  name: podinfo
+  namespace: flux-lab
+spec:
+  imageRepositoryRef:
+    name: podinfo
+  policy:
+    semver:
+      range: ">=6.0.0 <7.0.0"
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageUpdateAutomation
+metadata:
+  name: flux-lab
+  namespace: flux-lab
+spec:
+  interval: 30m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system           # your writable fleet repo
+    namespace: flux-system
+  git:
+    checkout:
+      ref: { branch: main }
+    commit:
+      author: { name: fluxcdbot, email: fluxcdbot@users.noreply.github.com }
+      messageTemplate: "chore(flux-lab): update images"
+    push:
+      branch: main              # or a separate branch + PR for a human gate (continuous delivery vs deployment)
+  update:
+    path: ./clusters/lab        # where the marked manifests live in your repo
+    strategy: Setters

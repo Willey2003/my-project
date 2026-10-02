@@ -1,0 +1,33 @@
+# mutate: add safe securityContext defaults to pods in kyverno-lab, only where the user set nothing.
+# +(field) = add if absent (never overwrites). (name): "*" = apply to every container in the list.
+# Runs in the mutating webhook, i.e. BEFORE any validate rule sees the pod.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: add-default-securitycontext
+  annotations:
+    policies.kyverno.io/title: Add Default securityContext
+    policies.kyverno.io/category: Pod Security
+    policies.kyverno.io/severity: medium
+    policies.kyverno.io/description: Adds runAsNonRoot, RuntimeDefault seccomp and allowPrivilegeEscalation=false when not set.
+spec:
+  rules:
+    - name: add-pod-and-container-defaults
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaces: [kyverno-lab]
+      mutate:
+        patchStrategicMerge:
+          spec:
+            securityContext:
+              +(runAsNonRoot): true
+              +(seccompProfile):
+                type: RuntimeDefault
+            containers:
+              - (name): "*"
+                securityContext:
+                  +(allowPrivilegeEscalation): false
+                  +(capabilities):
+                    drop: [ALL]

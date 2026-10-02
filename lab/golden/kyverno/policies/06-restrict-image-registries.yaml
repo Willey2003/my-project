@@ -1,0 +1,30 @@
+# validate (Enforce): images must come from an allowed registry, written fully qualified.
+# Note: an unqualified name like "nginx:1.27" is rejected - Kyverno matches the string as written,
+# so write "docker.io/library/nginx:1.27". =(initContainers) = "if present, must match too".
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: restrict-image-registries
+  annotations:
+    policies.kyverno.io/title: Restrict Image Registries
+    policies.kyverno.io/category: Supply Chain
+    policies.kyverno.io/severity: high
+    policies.kyverno.io/description: Only docker.io, ghcr.io, registry.k8s.io, the lab registry and ttl.sh are allowed.
+spec:
+  background: true
+  rules:
+    - name: validate-registries
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaces: [kyverno-lab]
+      validate:
+        failureAction: Enforce
+        message: "Image registry not allowed. Use docker.io/, ghcr.io/, registry.k8s.io/, localhost:5001/ or ttl.sh/."
+        pattern:
+          spec:
+            =(initContainers):
+              - image: "docker.io/* | ghcr.io/* | registry.k8s.io/* | localhost:5001/* | ttl.sh/*"
+            containers:
+              - image: "docker.io/* | ghcr.io/* | registry.k8s.io/* | localhost:5001/* | ttl.sh/*"

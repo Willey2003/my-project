@@ -1,0 +1,12 @@
+# CONCEPT EXERCISE (see functions.yaml header). What a developer submits (via Git, a Backstage form, or kubectl).
+# Expect: Namespace platform-lab-team-b with a "small" ResourceQuota.
+#   kubectl get xteamnamespace team-b
+#   crossplane beta trace xteamnamespace team-b
+# Then change size to large and watch the quota update (continuous reconciliation).
+apiVersion: platform.lab.devops/v1alpha1
+kind: XTeamNamespace
+metadata:
+  name: team-b
+spec:
+  team: team-b
+  size: small

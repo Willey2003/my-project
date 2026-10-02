@@ -1,0 +1,59 @@
+# RHCSA / RHCE lab: three Vagrant VMs on a host-only network, Ansible control flow, and the Linux practice labs.
+# Sources: lab/vagrant, lab/ansible, lab/linux. Commands: ./lab.sh vms up|halt|destroy|ssh <vm>, ./lab.sh ansible-ping
+# Render: python3 lab/architecture/diagram.py lab/architecture/specs/rhcsa-rhce-vms.yaml lab/architecture/
+title: "RHCSA / RHCE lab: Vagrant VMs and Ansible"
+subtitle: "./lab.sh vms up boots 3 AlmaLinux 10 VMs (2 GiB, 2 vCPU each) on 192.168.56.0/24; control drives node1/node2 with Ansible"
+width: 1600
+
+layout:
+  rows:
+    - [host, control, managed]
+    - [practice]
+
+groups:
+  - { id: host, label: "Host workstation", role: host, cols: 1 }
+  - { id: control, label: "control 192.168.56.10 (Ansible control node)", role: ci, cols: 2 }
+  - { id: managed, label: "Managed nodes: inventory group prod", role: compute, cols: 2 }
+  - { id: practice, label: "RHCSA practice labs (lab/linux, run as root on node1 / node2)", role: security, cols: 4 }
+
+nodes:
+  # host
+  - { id: labsh, label: "./lab.sh vms up", sublabel: "halt, destroy, ssh <vm>", group: host }
+  - { id: vagrantfile, label: "Vagrantfile", sublabel: "almalinux/10, VirtualBox or libvirt", group: host }
+  - { id: kit, label: "Lab kit repo", sublabel: "rsync to /lab in every VM", group: host, shape: cylinder }
+
+  # control
+  - { id: bootstrap, label: "bootstrap", sublabel: "common.sh + control.sh", group: control }
+  - { id: ansible, label: "ansible-core", sublabel: "ansible.posix, community.general", group: control }
+  - { id: playbooks, label: "Playbooks 01-04", sublabel: "baseline, storage, vault, hardening", group: control }
+  - { id: inventory, label: "inventory.ini", sublabel: "[web] node1, [db] node2; ansible.cfg: become sudo", group: control }
+  - { id: role, label: "role server_hardening", sublabel: "SELinux, sshd, sysctl, firewalld", group: control }
+  - { id: vault, label: "secrets.yml", sublabel: "ansible-vault", group: control, shape: cylinder }
+
+  # managed nodes
+  - { id: node1, label: "node1 [web]", sublabel: "192.168.56.11", group: managed }
+  - { id: node2, label: "node2 [db]", sublabel: "192.168.56.12", group: managed }
+  - { id: httpd, label: "httpd :80", sublabel: "index page with facts", group: managed }
+  - { id: secret, label: "/etc/app.secret", sublabel: "root 0600", group: managed }
+  - { id: disks1, label: "2 x 5 GB disks", sublabel: "02: vg_lab / lv_data on /data", group: managed, shape: cylinder }
+  - { id: disks2, label: "2 x 5 GB disks", sublabel: "02: vg_lab / lv_data on /data", group: managed, shape: cylinder }
+
+  # practice
+  - { id: mocks, label: "rhcsa-practice.md", sublabel: "EX200 Mock 1 + Mock 2", group: practice }
+  - { id: lvm, label: "lvm-lab.sh", sublabel: "2 x 1 GiB loop disks", group: practice }
+  - { id: perms, label: "permissions-lab.sh", sublabel: "setgid, sticky, ACLs", group: practice }
+  - { id: health, label: "health-check.sh", sublabel: ".service + .timer, 15 min", group: practice }
+
+edges:
+  - { from: labsh, to: vagrantfile, label: "vagrant up" }
+  - { from: vagrantfile, to: bootstrap, label: "provision" }
+  - { from: kit, to: playbooks, label: "/lab/ansible", dashed: true }
+  - { from: bootstrap, to: ansible, label: "installs" }
+  - { from: ansible, to: inventory }
+  - { from: playbooks, to: role, label: "04" }
+  - { from: vault, to: playbooks, label: "03", dashed: true }
+  - { from: inventory, to: managed, label: "ssh student" }
+  - { from: playbooks, to: inventory, label: "run" }
+  - { from: node1, to: httpd, label: "01 web tier" }
+  - { from: node2, to: secret, label: "03 db" }
+  - { from: managed, to: practice, label: "practice here", dashed: true }

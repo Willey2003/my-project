@@ -1,0 +1,29 @@
+# Week 49: eBPF enforcement. Kills any process in namespace 'cks-runtime' that execs a shell or netcat.
+# Test on a benign pod:  kubectl -n cks-runtime run t --image=busybox:1.36 -- sleep 3600 ; kubectl -n cks-runtime exec t -- sh
+# Watch: kubectl -n kube-system exec ds/tetragon -c tetragon -- tetra getevents -o compact
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cks-runtime
+  labels:
+    lab.devops/component: cks
+---
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicyNamespaced
+metadata:
+  name: block-shells
+  namespace: cks-runtime
+spec:
+  kprobes:
+    - call: "security_bprm_check"
+      syscall: false
+      args:
+        - index: 0
+          type: "linux_binprm"
+      selectors:
+        - matchArgs:
+            - index: 0
+              operator: "Postfix"
+              values: ["/sh", "/bash", "/ash", "/nc", "/ncat"]
+          matchActions:
+            - action: Sigkill

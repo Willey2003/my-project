@@ -1,0 +1,48 @@
+# KCA (Kyverno) lab: policies 01-08 scoped to namespace kyverno-lab, demo pods and the kyverno CLI test.
+# Render: python3 lab/architecture/diagram.py lab/architecture/specs/golden-kyverno.yaml lab/architecture/
+title: "Golden KCA: Kyverno policy lab (namespace kyverno-lab)"
+subtitle: "./lab.sh kind up, then ./lab.sh golden kyverno (= golden/kyverno/up.sh [test | down]); needs Kyverno 1.13+"
+width: 1800
+
+layout:
+  rows:
+    - [policies]
+    - [host, kyverno, kyvernolab]
+
+groups:
+  - { id: host, label: "Workstation", role: host, cols: 1 }
+  - { id: kyverno, label: "Namespace kyverno (./lab.sh addon kyverno)", role: platform, cols: 1 }
+  - { id: kyvernolab, label: "Namespace kyverno-lab (lab.devops/component: kca)", role: compute, cols: 2 }
+  - { id: policies, label: "ClusterPolicies (matched to kyverno-lab only)", role: security, cols: 4 }
+
+nodes:
+  - { id: dryrun, label: "kubectl apply --dry-run=server", sublabel: "test/resources-bad.yaml", group: host }
+  - { id: upsh, label: "up.sh", sublabel: "installs Kyverno if missing, applies 01-08", group: host }
+  - { id: cli, label: "kyverno test test/", sublabel: "offline, 17 results for 01, 02, 05, 06", group: host }
+
+  - { id: admission, label: "admission controller", sublabel: "mutate + validate webhooks", group: kyverno, shape: hexagon }
+  - { id: background, label: "background controller", sublabel: "generate, reports", group: kyverno, shape: hexagon }
+  - { id: cleanupctl, label: "cleanup controller", sublabel: "cron */10", group: kyverno, shape: hexagon }
+
+  - { id: goodpod, label: "good-pod", sublabel: "admitted + mutated", group: kyvernolab }
+  - { id: auditdemo, label: "audit-demo", sublabel: "no labels, cleanup=enabled", group: kyvernolab }
+  - { id: netpol, label: "NetworkPolicy default-deny-ingress", sublabel: "generated, synchronize", group: kyvernolab }
+  - { id: polr, label: "PolicyReport", sublabel: "kubectl get polr", group: kyvernolab, shape: cylinder }
+
+  - { id: p01, label: "01 require-labels", sublabel: "validate, Audit", group: policies }
+  - { id: p02, label: "02 disallow-latest-tag", sublabel: "validate, Enforce (2 rules)", group: policies }
+  - { id: p03, label: "03 add-default-securitycontext", sublabel: "mutate", group: policies }
+  - { id: p04, label: "04 generate-default-networkpolicy", sublabel: "generate on Namespace", group: policies }
+  - { id: p05, label: "05 require-requests-limits", sublabel: "validate, Enforce", group: policies }
+  - { id: p06, label: "06 restrict-image-registries", sublabel: "validate, Enforce", group: policies }
+  - { id: p07, label: "07 verify-image-signatures", sublabel: "cosign, Audit; skipped until key pasted", group: policies }
+  - { id: p08, label: "08 cleanup-bare-pods", sublabel: "ClusterCleanupPolicy v2", group: policies }
+
+edges:
+  - { from: upsh, to: kyverno, label: "addon", dashed: true }
+  - { from: dryrun, to: admission, label: "Enforce rejects" }
+  - { from: admission, to: goodpod, label: "mutate 03" }
+  - { from: background, to: netpol, label: "generate 04" }
+  - { from: background, to: polr, label: "Audit fail" }
+  - { from: cleanupctl, to: auditdemo, label: "delete 08", dashed: true }
+  - { from: policies, to: kyverno, label: "loaded by", dashed: true }

@@ -1,0 +1,59 @@
+# LFCS lab: two Ubuntu 24.04 VMs with spare NICs and disks, and the services built by the tasks in tasks.md.
+# Render: python3 lab/architecture/diagram.py lab/architecture/specs/golden-lfcs.yaml lab/architecture/
+title: "Golden LFCS: two Ubuntu 24.04 VMs (Vagrant, bento/ubuntu-24.04)"
+subtitle: "cd lab/golden/lfcs && VAGRANT_EXPERIMENTAL=disks vagrant up; 30 tasks in tasks.md (tN = task N), sudo /lfcs/check.sh grades the 14 [auto] ones"
+width: 1900
+
+layout:
+  rows:
+    - [host]
+    - [l1hw, nets, l2hw]
+    - [l1svc, l2svc]
+
+groups:
+  - { id: host, label: "Workstation (VirtualBox; on libvirt the disks are vdb..vdd)", role: host, cols: 2 }
+  - { id: l1hw, label: "lfcs1 (2 GiB, nested virt): NICs and spare disks", role: compute, cols: 2 }
+  - { id: nets, label: "Lab networks", role: network, cols: 1 }
+  - { id: l2hw, label: "lfcs2 (2 GiB): NICs and spare disks", role: compute, cols: 2 }
+  - { id: l1svc, label: "lfcs1 services (tasks.md)", role: compute, cols: 3 }
+  - { id: l2svc, label: "lfcs2 services (tasks.md)", role: compute, cols: 2 }
+
+nodes:
+  - { id: vagrant, label: "vagrant up / ssh / reload", sublabel: "creates lfcs1 + lfcs2; LAB_MEM, LAB_CPUS, LAB_BOX", group: host }
+  - { id: rsync, label: "rsync . -> /lfcs", sublabel: "tasks.md, check.sh in each VM", group: host }
+
+  - { id: l1lvm, label: "sdb", sublabel: "vg_lfcs/lv_data, ext4 /data, quota (t9, t10, t15)", group: l1hw, shape: cylinder }
+  - { id: l1e8, label: "enp0s8", sublabel: "192.168.60.11 (+ .21 via netplan, t1)", group: l1hw }
+  - { id: l1spare, label: "sdc, sdd", sublabel: "spare; plus /swapfile 512 MiB (t13)", group: l1hw, shape: cylinder }
+  - { id: l1bond, label: "enp0s9 + enp0s10", sublabel: "bond0 .61.21 (t23); br0 10.10.10.1 (t24)", group: l1hw }
+
+  - { id: pnet, label: "private network", sublabel: "192.168.60.0/24", group: nets, shape: cloud }
+  - { id: inet, label: "internal net lfcs-bond", sublabel: "192.168.61.0/24 on bond0", group: nets, shape: cloud }
+
+  - { id: l2e8, label: "enp0s8", sublabel: "192.168.60.12", group: l2hw }
+  - { id: l2raid, label: "sdb + sdc", sublabel: "md0 RAID 1 on /raid (t11)", group: l2hw, shape: cylinder }
+  - { id: l2bond, label: "enp0s9 + enp0s10", sublabel: "bond0 .61.22, active-backup (t23)", group: l2hw }
+  - { id: l2sdd, label: "sdd", sublabel: "replaces failed sdc (t12)", group: l2hw, shape: cylinder }
+
+  - { id: l1kvm, label: "KVM VM tiny", sublabel: "virsh, cirros, autostart (t29)", group: l1svc }
+  - { id: l1nginx, label: "nginx :80", sublabel: "reverse proxy LB (t7 hold, t26)", group: l1svc }
+  - { id: l1web, label: "docker web :8080", sublabel: "nginx:1.27, restart always (t28)", group: l1svc }
+  - { id: l1ops, label: "ufw, AppArmor, cron, timer, sysctl, Git", sublabel: "t4-6, t19-21, t30", group: l1svc }
+  - { id: l1nft, label: "nftables :9090", sublabel: "DNAT + masquerade (t25)", group: l1svc }
+  - { id: l1nfs, label: "NFS export", sublabel: "/srv/nfs/share (t14)", group: l1svc }
+
+  - { id: l2web, label: "docker web :8080", sublabel: "nginx:1.27, restart always (t28)", group: l2svc }
+  - { id: l2haproxy, label: "HAProxy :8081", sublabel: "round robin + health checks (t27)", group: l2svc }
+  - { id: l2mnt, label: "NFS mount /mnt/share", sublabel: "_netdev (t14)", group: l2svc }
+  - { id: l2ssh, label: "sshd hardening", sublabel: "00-hardening.conf (t22)", group: l2svc }
+
+edges:
+  - { from: l1e8, to: pnet }
+  - { from: l2e8, to: pnet }
+  - { from: l1bond, to: inet }
+  - { from: l2bond, to: inet }
+  - { from: l1nginx, to: l1web }
+  - { from: l1web, to: l2web, label: "LB peers" }
+  - { from: l1nft, to: l2web, label: "to .12:8080" }
+  - { from: l2haproxy, to: l2web }
+  - { from: l2mnt, to: l1nfs, label: "NFS" }

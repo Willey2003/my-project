@@ -1,0 +1,81 @@
+# Each pod breaks exactly ONE policy and is otherwise compliant, so a failure points at one rule.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: bad-no-labels                 # breaks require-labels
+  namespace: kyverno-lab
+spec:
+  containers:
+    - name: web
+      image: docker.io/nginxinc/nginx-unprivileged:1.27-alpine
+      resources:
+        requests: { cpu: 10m, memory: 32Mi }
+        limits: { memory: 64Mi }
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: bad-latest-tag                # breaks disallow-latest-tag / validate-image-tag
+  namespace: kyverno-lab
+  labels: { app.kubernetes.io/name: bad-latest-tag, lab.devops/component: kca }
+spec:
+  containers:
+    - name: web
+      image: docker.io/nginxinc/nginx-unprivileged:latest
+      resources:
+        requests: { cpu: 10m, memory: 32Mi }
+        limits: { memory: 64Mi }
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: bad-no-tag                    # breaks disallow-latest-tag / require-image-tag
+  namespace: kyverno-lab
+  labels: { app.kubernetes.io/name: bad-no-tag, lab.devops/component: kca }
+spec:
+  containers:
+    - name: web
+      image: docker.io/nginxinc/nginx-unprivileged
+      resources:
+        requests: { cpu: 10m, memory: 32Mi }
+        limits: { memory: 64Mi }
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: bad-no-resources              # breaks require-requests-limits
+  namespace: kyverno-lab
+  labels: { app.kubernetes.io/name: bad-no-resources, lab.devops/component: kca }
+spec:
+  containers:
+    - name: web
+      image: docker.io/nginxinc/nginx-unprivileged:1.27-alpine
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: bad-registry                  # breaks restrict-image-registries (quay.io not allowed)
+  namespace: kyverno-lab
+  labels: { app.kubernetes.io/name: bad-registry, lab.devops/component: kca }
+spec:
+  containers:
+    - name: web
+      image: quay.io/libpod/alpine:3.10.2
+      command: ["sleep", "3600"]
+      resources:
+        requests: { cpu: 10m, memory: 32Mi }
+        limits: { memory: 64Mi }
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: bad-unqualified-image         # breaks restrict-image-registries (no registry prefix)
+  namespace: kyverno-lab
+  labels: { app.kubernetes.io/name: bad-unqualified-image, lab.devops/component: kca }
+spec:
+  containers:
+    - name: web
+      image: nginx:1.27
+      resources:
+        requests: { cpu: 10m, memory: 32Mi }
+        limits: { memory: 64Mi }

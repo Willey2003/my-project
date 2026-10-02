@@ -1,0 +1,18 @@
+# Week 3 deliverable: oneshot service + timer. Install:
+#   sudo cp health-check.sh /usr/local/bin/ && sudo cp health-check.{service,timer} /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now health-check.timer
+#   systemctl list-timers health-check.timer ; journalctl -u health-check -e
+[Unit]
+Description=Server health check
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/health-check.sh
+# Treat WARN (1) as success so the unit only fails on CRIT
+SuccessExitStatus=1
+# Hardening you can inspect with: systemd-analyze security health-check
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+NoNewPrivileges=true

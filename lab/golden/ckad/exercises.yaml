@@ -1,0 +1,399 @@
+# CKAD golden exercises - reference solutions for the 12 tasks in README.md.
+# Try each task from a blank namespace first; apply this file only to compare.
+# Everything lives in namespace ckad-lab. Cleanup: kubectl delete ns ckad-lab
+# NetworkPolicy (task 12) is only enforced with an enforcing CNI: ./lab.sh kind up cilium
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ckad-lab
+  labels:
+    lab.devops/component: ckad
+---
+# Task 1 - multi-container pod: init container seeds content, native sidecar tails a shared log
+apiVersion: v1
+kind: Pod
+metadata:
+  name: t1-sidecar
+  namespace: ckad-lab
+  labels: { app: t1 }
+spec:
+  initContainers:
+    - name: seed
+      image: busybox:1.36
+      command: ["sh", "-c", "echo 'ckad t1' > /html/index.html"]
+      volumeMounts: [{ name: html, mountPath: /html }]
+    - name: log-tailer
+      image: busybox:1.36
+      restartPolicy: Always
+      command: ["sh", "-c", "touch /logs/access.log; tail -F /logs/access.log"]
+      volumeMounts: [{ name: logs, mountPath: /logs }]
+  containers:
+    - name: web
+      image: nginx:1.27
+      volumeMounts:
+        - { name: html, mountPath: /usr/share/nginx/html }
+        - { name: logs, mountPath: /var/log/nginx }
+  volumes:
+    - { name: html, emptyDir: {} }
+    - { name: logs, emptyDir: {} }
+---
+# Task 2 - Job: 4 completions, 2 in parallel, backoffLimit 2, cleaned up 10 min after finishing
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: t2-job
+  namespace: ckad-lab
+spec:
+  completions: 4
+  parallelism: 2
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: work
+          image: busybox:1.36
+          command: ["sh", "-c", "echo processing $(hostname); sleep 3"]
+---
+# Task 3 - CronJob every 2 minutes, no overlap, keep 2 successful / 1 failed job
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: t3-cron
+  namespace: ckad-lab
+spec:
+  schedule: "*/2 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: tick
+              image: busybox:1.36
+              command: ["sh", "-c", "date; echo tick"]
+---
+# Task 4 - PVC mounted into a pod that appends to a file
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: t4-data
+  namespace: ckad-lab
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: { requests: { storage: 100Mi } }
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: t4-writer
+  namespace: ckad-lab
+spec:
+  containers:
+    - name: writer
+      image: busybox:1.36
+      command: ["sh", "-c", "while true; do date >> /data/out.log; sleep 10; done"]
+      volumeMounts: [{ name: data, mountPath: /data }]
+  volumes:
+    - name: data
+      persistentVolumeClaim: { claimName: t4-data }
+---
+# Task 5 - rolling update deployment (task: set image to nginx:1.27, then roll back)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: t5-web
+  namespace: ckad-lab
+  annotations:
+    kubernetes.io/change-cause: "initial nginx:1.26"
+spec:
+  replicas: 3
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  selector: { matchLabels: { app: t5-web } }
+  template:
+    metadata: { labels: { app: t5-web } }
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.26
+          ports: [{ containerPort: 80 }]
+          readinessProbe: { httpGet: { path: /, port: 80 }, periodSeconds: 5 }
+---
+# Task 6 - blue/green: two deployments, one Service; cut over by patching the selector
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: t6-blue
+  namespace: ckad-lab
+spec:
+  replicas: 2
+  selector: { matchLabels: { app: t6, version: blue } }
+  template:
+    metadata: { labels: { app: t6, version: blue } }
+    spec:
+      containers:
+        - name: web
+          image: nginx:1.26
+          ports: [{ containerPort: 80 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: t6-green
+  namespace: ckad-lab
+spec:
+  replicas: 2
+  selector: { matchLabels: { app: t6, version: green } }
+  template:
+    metadata: { labels: { app: t6, version: green } }
+    spec:
+      containers:
+        - name: web
+          image: nginx:1.27
+          ports: [{ containerPort: 80 }]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: t6-web
+  namespace: ckad-lab
+spec:
+  selector: { app: t6, version: blue }
+  ports: [{ port: 80, targetPort: 80 }]
+---
+# Task 7 - probes: startup, readiness and liveness on nginx
+apiVersion: v1
+kind: Pod
+metadata:
+  name: t7-probes
+  namespace: ckad-lab
+  labels: { app: t7 }
+spec:
+  containers:
+    - name: web
+      image: nginx:1.27
+      ports: [{ containerPort: 80 }]
+      startupProbe: { httpGet: { path: /, port: 80 }, failureThreshold: 30, periodSeconds: 2 }
+      readinessProbe: { httpGet: { path: /, port: 80 }, periodSeconds: 5 }
+      livenessProbe: { tcpSocket: { port: 80 }, periodSeconds: 10, failureThreshold: 3 }
+---
+# Task 8 - ConfigMap + Secret consumed as env and as a mounted file
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: t8-config
+  namespace: ckad-lab
+data:
+  MODE: lab
+  app.properties: |
+    greeting=hello
+    retries=3
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: t8-secret
+  namespace: ckad-lab
+type: Opaque
+stringData:
+  DB_PASSWORD: not-a-real-password
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: t8-config-pod
+  namespace: ckad-lab
+spec:
+  containers:
+    - name: app
+      image: busybox:1.36
+      command: ["sh", "-c", "echo MODE=$MODE; cat /etc/app/app.properties; sleep 3600"]
+      env:
+        - name: MODE
+          valueFrom: { configMapKeyRef: { name: t8-config, key: MODE } }
+        - name: DB_PASSWORD
+          valueFrom: { secretKeyRef: { name: t8-secret, key: DB_PASSWORD } }
+      volumeMounts: [{ name: cfg, mountPath: /etc/app, readOnly: true }]
+  volumes:
+    - name: cfg
+      configMap:
+        name: t8-config
+        items: [{ key: app.properties, path: app.properties }]
+---
+# Task 9 - SecurityContext + dedicated ServiceAccount without token automount
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: t9-app
+  namespace: ckad-lab
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: t9-secure
+  namespace: ckad-lab
+spec:
+  serviceAccountName: t9-app
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 3000
+    fsGroup: 2000
+    seccompProfile: { type: RuntimeDefault }
+  containers:
+    - name: app
+      image: busybox:1.36
+      command: ["sh", "-c", "id; touch /tmp/ok && echo tmp-writable; sleep 3600"]
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities: { drop: [ALL] }
+      volumeMounts: [{ name: tmp, mountPath: /tmp }]
+  volumes:
+    - { name: tmp, emptyDir: {} }
+---
+# Task 10 - ResourceQuota + LimitRange, and RBAC: SA t10-reader may only read pods
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: t10-quota
+  namespace: ckad-lab
+spec:
+  hard:
+    requests.cpu: "2"
+    requests.memory: 2Gi
+    limits.cpu: "4"
+    limits.memory: 4Gi
+    pods: "20"
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: t10-defaults
+  namespace: ckad-lab
+spec:
+  limits:
+    - type: Container
+      default: { cpu: 200m, memory: 128Mi }
+      defaultRequest: { cpu: 50m, memory: 32Mi }
+      max: { cpu: "1", memory: 512Mi }
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: t10-reader
+  namespace: ckad-lab
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: t10-pod-reader
+  namespace: ckad-lab
+rules:
+  - apiGroups: [""]
+    resources: [pods, pods/log]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: t10-reader-binding
+  namespace: ckad-lab
+subjects:
+  - kind: ServiceAccount
+    name: t10-reader
+    namespace: ckad-lab
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: t10-pod-reader
+---
+# Task 11 - Deployment + ClusterIP Service + Ingress (needs ./lab.sh addon ingress)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: t11-api
+  namespace: ckad-lab
+spec:
+  replicas: 2
+  selector: { matchLabels: { app: t11-api } }
+  template:
+    metadata: { labels: { app: t11-api, tier: backend } }
+    spec:
+      containers:
+        - name: api
+          image: nginx:1.27
+          ports: [{ containerPort: 80, name: http }]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: t11-api
+  namespace: ckad-lab
+spec:
+  type: ClusterIP
+  selector: { app: t11-api }
+  ports: [{ port: 8080, targetPort: http }]
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: t11-ingress
+  namespace: ckad-lab
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: ckad.lab.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: t11-api, port: { number: 8080 } }
+---
+# Task 12 - NetworkPolicy: only pods labelled role=frontend in ckad-lab may reach t11-api on port 80
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: t12-api-allow-frontend
+  namespace: ckad-lab
+spec:
+  podSelector: { matchLabels: { app: t11-api } }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: { matchLabels: { role: frontend } }
+      ports: [{ protocol: TCP, port: 80 }]
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: t12-frontend
+  namespace: ckad-lab
+  labels: { role: frontend }
+spec:
+  containers:
+    - name: curl
+      image: curlimages/curl:8.10.1
+      command: ["sh", "-c", "sleep 3600"]
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: t12-intruder
+  namespace: ckad-lab
+  labels: { role: other }
+spec:
+  containers:
+    - name: curl
+      image: curlimages/curl:8.10.1
+      command: ["sh", "-c", "sleep 3600"]

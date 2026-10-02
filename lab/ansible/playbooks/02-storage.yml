@@ -1,0 +1,37 @@
+---
+# Week 15 / EX294 classic: LVM on the spare disk, with error handling when the VG is missing.
+- name: Create LVM volume if the spare disk exists
+  hosts: all
+  vars:
+    vg: vg_lab
+    lv: lv_data
+    disk: /dev/sdb   # libvirt: /dev/vdb
+  tasks:
+    - name: Storage block
+      block:
+        - name: Create volume group
+          community.general.lvg:
+            vg: "{{ vg }}"
+            pvs: "{{ disk }}"
+
+        - name: Create 1500M logical volume
+          community.general.lvol:
+            vg: "{{ vg }}"
+            lv: "{{ lv }}"
+            size: 1500m
+
+        - name: Make xfs
+          community.general.filesystem:
+            fstype: xfs
+            dev: "/dev/{{ vg }}/{{ lv }}"
+
+        - name: Mount persistently
+          ansible.posix.mount:
+            path: /data
+            src: "/dev/{{ vg }}/{{ lv }}"
+            fstype: xfs
+            state: mounted
+      rescue:
+        - name: Report missing disk
+          ansible.builtin.debug:
+            msg: "{{ disk }} not usable on {{ inventory_hostname }} - check lsblk"

@@ -1,0 +1,11 @@
+---
+hardening_ssh_port: 22
+hardening_permit_root_login: "no"
+hardening_allowed_services: [ssh]
+hardening_banner: "Authorized use only. Activity is logged."
+hardening_selinux_state: enforcing
+hardening_sysctl:
+  net.ipv4.conf.all.accept_redirects: 0
+  net.ipv4.conf.all.send_redirects: 0
+  net.ipv4.icmp_echo_ignore_broadcasts: 1
+  kernel.kptr_restrict: 2

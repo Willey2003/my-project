@@ -1,0 +1,14 @@
+# kubectl apply -k lab/golden/observability/pca   (requires the monitoring addon for the CRDs)
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: prom-lab
+resources:
+  - namespace.yaml
+  - app.yaml
+  - servicemonitor.yaml
+  - prometheusrule.yaml
+  - alertmanagerconfig.yaml
+configMapGenerator:
+  - name: shop-api-code
+    files:
+      - app.py

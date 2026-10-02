@@ -1,0 +1,44 @@
+# Jaeger v2 all-in-one (in-memory storage - traces are lost on restart). Receives OTLP from the
+# Collector on 4317/4318; UI: kubectl -n otel-lab port-forward svc/jaeger 16686  -> http://localhost:16686
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jaeger
+  namespace: otel-lab
+  labels: { app: jaeger }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: jaeger }
+  template:
+    metadata:
+      labels: { app: jaeger }
+    spec:
+      containers:
+        - name: jaeger
+          image: jaegertracing/jaeger:2.10.0
+          env:
+            - { name: JAEGER_LISTEN_HOST, value: 0.0.0.0 }   # bind receivers on all interfaces
+          ports:
+            - { name: ui, containerPort: 16686 }
+            - { name: otlp-grpc, containerPort: 4317 }
+            - { name: otlp-http, containerPort: 4318 }
+          readinessProbe:
+            tcpSocket: { port: ui }
+            initialDelaySeconds: 5
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 512Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jaeger
+  namespace: otel-lab
+  labels: { app: jaeger }
+spec:
+  selector: { app: jaeger }
+  ports:
+    - { name: ui, port: 16686, targetPort: ui }
+    - { name: otlp-grpc, port: 4317, targetPort: otlp-grpc, appProtocol: grpc }
+    - { name: otlp-http, port: 4318, targetPort: otlp-http }

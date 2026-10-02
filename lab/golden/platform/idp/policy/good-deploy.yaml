@@ -1,0 +1,26 @@
+# Passes the guardrails: team label + pinned image. No resources set - the tenant LimitRange injects defaults,
+# so the ResourceQuota still admits it. Check: kubectl -n platform-lab get pod -l app=good-app -o jsonpath='{..resources}'
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: good-app
+  namespace: platform-lab
+  labels: { team: platform, app: good-app }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: good-app }
+  template:
+    metadata:
+      labels: { app: good-app, team: platform }
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: web
+          image: nginxinc/nginx-unprivileged:1.27-alpine
+          ports: [{ containerPort: 8080 }]
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }

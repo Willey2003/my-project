@@ -1,0 +1,41 @@
+# Phase 28 (CNPA/CNPE) - policy as code with the built-in ValidatingAdmissionPolicy (CEL, GA in Kubernetes 1.30; no add-on needed).
+# Guardrail: Deployments in tenant namespaces (label lab.devops/component=cnpe) must carry a 'team' label
+# and must not use ':latest' or untagged images.
+#   kubectl apply -f require-team-label.yaml
+#   kubectl apply -f bad-deploy.yaml    -> denied, message explains why
+#   kubectl apply -f good-deploy.yaml   -> admitted
+# Drill: set validationActions to [Warn, Audit] and compare; then write the same rule in Kyverno or Gatekeeper.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: tenant-deployment-guardrails
+  labels: { lab.devops/component: cnpe }
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [apps]
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [deployments]
+  validations:
+    - expression: "has(object.metadata.labels) && 'team' in object.metadata.labels"
+      message: "Deployments in tenant namespaces need a 'team' label (used for ownership, cost and alert routing)."
+      reason: Invalid
+    - expression: >-
+        object.spec.template.spec.containers.all(c,
+          c.image.contains(':') && !c.image.endsWith(':latest'))
+      message: "Pin container images to a version tag or digest - ':latest' and untagged images are not allowed."
+      reason: Invalid
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: tenant-deployment-guardrails
+  labels: { lab.devops/component: cnpe }
+spec:
+  policyName: tenant-deployment-guardrails
+  validationActions: [Deny]
+  matchResources:
+    namespaceSelector:
+      matchLabels: { lab.devops/component: cnpe }

@@ -1,0 +1,87 @@
+# CCA lab demo app: the Cilium "Star Wars" demo, moved into its own namespace.
+#   deathstar  - HTTP API on port 80 (org=empire, class=deathstar), 2 replicas behind Service 'deathstar'
+#   tiefighter - client pod, org=empire   (allowed to land)
+#   xwing      - client pod, org=alliance (blocked by the policies)
+#   mediabot   - client pod used for the DNS/FQDN egress policy
+# Images are Cilium's public demo images (quay.io/cilium/*).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cilium-lab
+  labels: { lab.devops/component: cca, lab.devops/track: golden-kubestronaut }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: deathstar
+  namespace: cilium-lab
+  labels: { app.kubernetes.io/name: deathstar, lab.devops/component: cca }
+spec:
+  type: ClusterIP
+  selector: { org: empire, class: deathstar }
+  ports:
+    - { name: http, port: 80, targetPort: 80, protocol: TCP }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deathstar
+  namespace: cilium-lab
+  labels: { app.kubernetes.io/name: deathstar, lab.devops/component: cca }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { org: empire, class: deathstar }
+  template:
+    metadata:
+      labels: { org: empire, class: deathstar, app.kubernetes.io/name: deathstar, lab.devops/component: cca }
+    spec:
+      containers:
+        - name: deathstar
+          image: quay.io/cilium/starwars:v2.1
+          ports: [ { containerPort: 80 } ]
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { memory: 64Mi }
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: tiefighter
+  namespace: cilium-lab
+  labels: { org: empire, class: tiefighter, app.kubernetes.io/name: tiefighter, lab.devops/component: cca }
+spec:
+  containers:
+    - name: spaceship
+      image: quay.io/cilium/json-mock:v1.3.8
+      resources:
+        requests: { cpu: 10m, memory: 16Mi }
+        limits: { memory: 64Mi }
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: xwing
+  namespace: cilium-lab
+  labels: { org: alliance, class: xwing, app.kubernetes.io/name: xwing, lab.devops/component: cca }
+spec:
+  containers:
+    - name: spaceship
+      image: quay.io/cilium/json-mock:v1.3.8
+      resources:
+        requests: { cpu: 10m, memory: 16Mi }
+        limits: { memory: 64Mi }
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mediabot
+  namespace: cilium-lab
+  labels: { org: empire, class: mediabot, app.kubernetes.io/name: mediabot, lab.devops/component: cca }
+spec:
+  containers:
+    - name: mediabot
+      image: quay.io/cilium/json-mock:v1.3.8
+      resources:
+        requests: { cpu: 10m, memory: 16Mi }
+        limits: { memory: 64Mi }

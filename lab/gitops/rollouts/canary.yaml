@@ -1,0 +1,62 @@
+# Week 54: canary with an automated analysis gate.
+# Promote a new version: kubectl argo rollouts set image demo demo=argoproj/rollouts-demo:yellow -n rollouts-demo
+# Watch:                 kubectl argo rollouts get rollout demo -n rollouts-demo --watch
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: demo
+spec:
+  replicas: 5
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels: { app: demo }
+  template:
+    metadata:
+      labels: { app: demo }
+    spec:
+      containers:
+        - name: demo
+          image: argoproj/rollouts-demo:blue
+          ports: [{ containerPort: 8080 }]
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+  strategy:
+    canary:
+      steps:
+        - setWeight: 20
+        - analysis:
+            templates: [{ templateName: smoke-test }]
+        - setWeight: 50
+        - pause: { duration: 30s }
+        - setWeight: 80
+        - pause: { duration: 30s }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: demo }
+spec:
+  selector: { app: demo }
+  ports: [{ port: 80, targetPort: 8080 }]
+---
+# A Job-based analysis: passes if the service answers. Swap for a Prometheus query once monitoring is installed.
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: smoke-test
+spec:
+  metrics:
+    - name: http-ok
+      count: 3
+      interval: 10s
+      failureLimit: 1
+      provider:
+        job:
+          spec:
+            backoffLimit: 0
+            template:
+              spec:
+                restartPolicy: Never
+                containers:
+                  - name: curl
+                    image: curlimages/curl:8.10.1
+                    command: ["curl", "-fsS", "--max-time", "3", "http://demo/color"]

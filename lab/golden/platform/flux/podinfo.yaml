@@ -1,0 +1,85 @@
+# Phase 26 (CGOA) - Flux sources + reconcilers for podinfo, all in namespace flux-lab.
+# Needs the Flux controllers: `flux install` (or `flux bootstrap github ...`), then:
+#   kubectl apply -f podinfo.yaml     (or ./up.sh)
+#   flux get all -n flux-lab
+# Two independent deployments of the same app, to compare the two reconcilers:
+#   GitRepository  podinfo       -> Kustomization podinfo     -> Deployment podinfo       (plain kustomize dir)
+#   HelmRepository podinfo       -> HelmRelease   podinfo-helm -> Deployment podinfo-helm (real Helm release: helm -n flux-lab list)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: flux-lab
+  labels: { lab.devops/component: cgoa }
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: podinfo
+  namespace: flux-lab
+spec:
+  interval: 1m                  # how often source-controller checks for new commits
+  url: https://github.com/stefanprodan/podinfo
+  ref:
+    branch: master              # drill: try `tag: 6.5.0`, then `semver: ">=6.0.0 <7.0.0"`, then a `commit:` SHA
+  ignore: |
+    /*
+    !/kustomize/
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: podinfo
+  namespace: flux-lab
+spec:
+  interval: 10m                 # full re-apply (drift correction) at least this often
+  retryInterval: 1m
+  timeout: 3m
+  sourceRef:
+    kind: GitRepository
+    name: podinfo
+  path: ./kustomize             # Deployment + Service + HPA
+  prune: true                   # delete objects that disappear from Git
+  wait: true                    # Ready only when all applied objects are healthy
+  targetNamespace: flux-lab
+  commonMetadata:
+    labels: { lab.devops/component: cgoa }
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: podinfo
+  namespace: flux-lab
+spec:
+  interval: 1h
+  url: https://stefanprodan.github.io/podinfo
+  # OCI alternative: type: oci, url: oci://ghcr.io/stefanprodan/charts (or use an OCIRepository + spec.chartRef)
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: podinfo-helm
+  namespace: flux-lab
+spec:
+  interval: 10m
+  releaseName: podinfo-helm     # chart fullname becomes podinfo-helm, so no clash with the Kustomization's podinfo
+  targetNamespace: flux-lab
+  chart:
+    spec:
+      chart: podinfo
+      version: ">=6.0.0 <7.0.0" # semver range: helm-controller upgrades when a new 6.x chart appears
+      sourceRef:
+        kind: HelmRepository
+        name: podinfo
+      interval: 1h
+  install:
+    remediation: { retries: 3 }
+  upgrade:
+    remediation: { retries: 3, remediateLastFailure: true }   # roll back if the upgrade fails
+  driftDetection:
+    mode: enabled               # Helm drift detection is off by default - turn it on for the drift drill
+  values:
+    replicaCount: 2
+    ui:
+      message: "Deployed by Flux helm-controller (CGOA lab)"
+    podAnnotations:
+      lab.devops/component: cgoa
